@@ -2,7 +2,8 @@
 
 
 #include "SwimmingState.h"
-
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 
 void SwimmingState::HandleInput(AMovementCharacter* aMovementCharacter, InputTypeDirection inputType, float axisValue)
 {
@@ -23,4 +24,10 @@ void SwimmingState::HandleInput(AMovementCharacter* aMovementCharacter, InputTyp
 void SwimmingState::Update(AMovementCharacter* aMovementCharacter)
 {
 	UE_LOG(LogTemp, Warning, TEXT("inside Update of swimming state"));
+	SwimStateSoundCooldown += aMovementCharacter->GetWorld()->DeltaTimeSeconds;
+	if (SwimStateSoundCooldown > 1.5f)
+	{
+		SwimStateSoundCooldown = 0.0f;
+		UGameplayStatics::PlaySound2D(aMovementCharacter->GetWorld(), aMovementCharacter->SwimSound);
+	}
 }

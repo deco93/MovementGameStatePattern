@@ -11,6 +11,7 @@ void ClimbingState::HandleInput(AMovementCharacter* aMovementCharacter, InputTyp
 	if (inputType == InputTypeDirection::FORWARD_ITD)
 	{
 		aMovementCharacter->SetTimer();
+		UGameplayStatics::PlaySound2D(aMovementCharacter->GetWorld(),aMovementCharacter->ClimbSound);
 	}
 	else if (inputType == InputTypeDirection::RIGHT_ITD)
 	{

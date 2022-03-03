@@ -18,16 +18,17 @@ AMovementGameMode::AMovementGameMode()
 FHitResult AMovementGameMode::DrawLineTrace(FVector Start, FVector End, FColor Color, bool PersistentLine, float LifeTime)
 {
 	FHitResult OHit;
-	if (VisualizeDebug)
-	{
+	
 		FCollisionQueryParams TraceParams;
 		UWorld* uWorld = GetWorld();
 		bool HitSuccess = uWorld->LineTraceSingleByChannel(OHit, Start, End, ECC_Visibility, TraceParams);
-		DrawDebugLine(uWorld,Start, End,Color, PersistentLine, LifeTime);
-		if (HitSuccess)
+		if (VisualizeDebug)
 		{
-			DrawDebugBox(uWorld,OHit.ImpactPoint, FVector(5,5,5), FColor::Green,PersistentLine, LifeTime);
+			DrawDebugLine(uWorld, Start, End, Color, PersistentLine, LifeTime);
+			if (HitSuccess)
+			{
+				DrawDebugBox(uWorld, OHit.ImpactPoint, FVector(5, 5, 5), FColor::Green, PersistentLine, LifeTime);
+			}
 		}
-	}
 	return OHit;
 }

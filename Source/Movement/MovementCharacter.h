@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 //#include "SwimmingState.h"
 //#include "NinjaState.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 #include "MovementCharacter.generated.h"
 
 UCLASS(config=Game)
@@ -39,6 +41,8 @@ public:
 	void OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void BeginPlay() override;
+
+	void Jump();
 protected:
 
 	
@@ -91,5 +95,14 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	float GetLedgeHorizontalSpeed();
+
+	UPROPERTY(EditAnywhere)
+	USoundCue* JumpSound;
+
+	UPROPERTY(EditAnywhere)
+	USoundCue* ClimbSound;
+
+	UPROPERTY(EditAnywhere)
+	USoundCue* SwimSound;
 };
 

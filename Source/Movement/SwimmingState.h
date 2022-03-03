@@ -18,4 +18,5 @@ public:
 
 	float WaterZ = 0.0f;
 	bool InWater = false;
+	float SwimStateSoundCooldown = 0.0f;
 };

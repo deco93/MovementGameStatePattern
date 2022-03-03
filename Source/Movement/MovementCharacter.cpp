@@ -71,7 +71,7 @@ void AMovementCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 {
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMovementCharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMovementCharacter::MoveForward);
@@ -120,6 +120,13 @@ void AMovementCharacter::BeginPlay()
 	GM = Cast<AMovementGameMode>(GetWorld()->GetAuthGameMode());
 }
 
+void AMovementCharacter::Jump()
+{
+	if(!GetCharacterMovement()->IsFalling())
+		UGameplayStatics::PlaySound2D(GetWorld(),JumpSound);
+	ACharacter::Jump();
+}
+
 void AMovementCharacter::Tick(float DeltaSeconds)
 {
 	//UE_LOG(LogTemp, Warning, TEXT("inside char tick %d tick delta %f"), count++, DeltaSeconds);
@@ -140,6 +147,9 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 		{
 			uCharaceterMovement->SetMovementMode(EMovementMode::MOVE_Walking);
 		}
+
+		if (currentNinjaState && uCharaceterMovement->MovementMode == EMovementMode::MOVE_Swimming)
+			currentNinjaState->Update(this);
 		//UE_LOG(LogTemp, Warning, TEXT("current movement mode walking: %d swimming: %d"), uCharaceterMovement->MovementMode == EMovementMode::MOVE_Walking, uCharaceterMovement->MovementMode == EMovementMode::MOVE_Swimming);
 	}
 	if (GetCharacterMovement()->IsFalling())
