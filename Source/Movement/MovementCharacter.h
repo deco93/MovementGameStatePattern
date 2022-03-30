@@ -22,6 +22,9 @@ class AMovementCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+	class UInventoryComponent* Inventory;
 public:
 	AMovementCharacter();
 	~AMovementCharacter();
@@ -104,5 +107,11 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	USoundCue* SwimSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= "Health")
+	float Health;
+
+	UFUNCTION(BlueprintCallable, Category = "Items")
+	void UseItem(class UItem* Item);
 };
 

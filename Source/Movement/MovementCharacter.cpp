@@ -12,7 +12,8 @@
 #include "ClimbingState.h"
 #include "NinjaState.h"
 #include "MovementGameMode.h"
-
+#include "Item.h"
+#include "InventoryComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMovementCharacter
@@ -47,12 +48,17 @@ AMovementCharacter::AMovementCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+
+	Inventory = CreateDefaultSubobject<UInventoryComponent>(TEXT("CharacterInventory"));
+	Inventory->Capacity = 20;
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AMovementCharacter::OnBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &AMovementCharacter::OnEndOverlap);
 	swimmingState = new SwimmingState();
 	climbingState = new ClimbingState();
+	Health = 70.0f;
 }
 
 AMovementCharacter::~AMovementCharacter()
@@ -304,4 +310,13 @@ bool  AMovementCharacter::GetClimbUp()
 float AMovementCharacter::GetLedgeHorizontalSpeed()
 {
 	return climbingState->LedgeHorizontalSpeed;
+}
+
+void AMovementCharacter::UseItem(class UItem* Item)
+{
+	if (Item)
+	{
+		Item->Use(this);
+		Item->OnUse(this);//this is bp implementation
+	}
 }
