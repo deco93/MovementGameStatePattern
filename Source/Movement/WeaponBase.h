@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "GunItem.h"
 #include "WeaponBase.generated.h"
 
 UCLASS()
@@ -24,9 +25,11 @@ public:
 	UPROPERTY(EditAnywhere)
 	class UBoxComponent* WeaponBoxCollisionComponent;
 
+	
+
 	UPROPERTY(EditAnywhere)
 	class UGunItem* WeaponInventoryItem;
-
+	
 	void Fire();
 
 	bool WeaponPickedUp = false;//set once player picks up weapon so a prompt to pickup is not shown anymore
@@ -36,12 +39,12 @@ public:
 
 	UFUNCTION()
 	void OnOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	UGunItem* GetWeaponInventoryItem();
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-//public:	
-//	// Called every frame
-//	virtual void Tick(float DeltaTime) override;
+
 
 };

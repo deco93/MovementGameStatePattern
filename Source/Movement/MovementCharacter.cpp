@@ -10,6 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "SwimmingState.h"
 #include "ClimbingState.h"
+#include "ArmedState.h"
 #include "NinjaState.h"
 #include "MovementGameMode.h"
 #include "Item.h"
@@ -59,6 +60,7 @@ AMovementCharacter::AMovementCharacter()
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &AMovementCharacter::OnEndOverlap);
 	swimmingState = new SwimmingState();
 	climbingState = new ClimbingState();
+	armedState = new ArmedState();
 	Health = 70.0f;
 }
 
@@ -80,6 +82,7 @@ void AMovementCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	check(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMovementCharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	PlayerInputComponent->BindAction("Pickup", IE_Released, this, &AMovementCharacter::Pickup);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMovementCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMovementCharacter::MoveRight);
@@ -339,25 +342,53 @@ void AMovementCharacter::UseItem(class UItem* Item)
 
 void AMovementCharacter::AddToInventory(UItem* Item)
 {
+	UE_LOG(LogTemp, Warning, TEXT("MovementCharacter AddToInventory called"));
 	if (Inventory)
 	{
 		Inventory->AddItem(Item);
 	}
 }
 
-void AMovementCharacter::EquipWeaponToHand()
+void AMovementCharacter::RemoveFromInventory(class UItem* Item)
 {
-	if (Weapon)
+	UE_LOG(LogTemp, Warning, TEXT("MovementCharacter RemoveFromInventory called"));
+	if (Inventory)
 	{
-		if (!WeaponInHand)
+		Inventory->RemoveItem(Item);
+	}
+}
+
+void AMovementCharacter::TriggerPickup(FVector Location)
+{
+	OnPickup.Broadcast(Location);
+}
+
+void AMovementCharacter::Pickup()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Pressed Pickup"));
+	//if (Weapon) {
+	if (PotentialWeapon) {
+		//TODO Pickup logic
+		AddToInventory(PotentialWeapon->GetWeaponInventoryItem());
+		FVector NewWeaponLocation = PotentialWeapon->GetActorLocation();
+		TriggerPickup(PotentialWeapon->GetActorLocation());
+		PotentialWeapon->WeaponPickedUp = true;
+		PotentialWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
+		if (Weapon)
 		{
-			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
-			WeaponInHand = true;
+			Weapon->DetachRootComponentFromParent(false);
+			Weapon->SetActorLocation(NewWeaponLocation);
+			Weapon->WeaponPickedUp = false;
+			TriggerPickup(Weapon->GetActorLocation());
+			RemoveFromInventory(Weapon->GetWeaponInventoryItem());
+			Weapon = PotentialWeapon;
 		}
 		else
 		{
-			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
-			WeaponInHand = false;
+			Weapon = PotentialWeapon;
 		}
+		/*Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
+		Weapon->WeaponPickedUp = true;
+		TriggerPickup(Weapon->GetActorLocation());*/
 	}
 }

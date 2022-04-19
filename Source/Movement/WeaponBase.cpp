@@ -4,8 +4,9 @@
 #include "WeaponBase.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/WidgetComponent.h"
 #include "MovementCharacter.h"
-#include "GunItem.h"
+
 
 
 // Sets default values
@@ -18,7 +19,7 @@ AWeaponBase::AWeaponBase()
 	RootComponent = WeaponSkeletalMeshComp;
 	WeaponBoxCollisionComponent = CreateDefaultSubobject<UBoxComponent>("WeaponBoxCollisionComponent");
 	WeaponBoxCollisionComponent->SetRelativeLocation(FVector(0, 0, 0));
-	
+	//WeaponWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("WeaponWidgetComponent");
 }
 
 // Called when the game starts or when spawned
@@ -47,10 +48,16 @@ void AWeaponBase::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Ot
 			if (Char && WeaponInventoryItem)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Did overlap with Ninja Char"));
-				Char->AddToInventory(WeaponInventoryItem);
-				Char->Weapon = this;
-				Char->Weapon->AttachToComponent(Char->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
-				WeaponPickedUp = true;
+				//Char->AddToInventory(WeaponInventoryItem);
+				Char->PotentialWeapon = this;
+				Char->TriggerPickup(GetActorLocation());
+				/*Char->Weapon = this;
+				Char->TriggerPickup(GetActorLocation());*/
+				
+				
+				
+				/*Char->Weapon->AttachToComponent(Char->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
+				WeaponPickedUp = true;*/
 			}
 		}
 	}
@@ -59,16 +66,26 @@ void AWeaponBase::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Ot
 void AWeaponBase::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	//UE_LOG(LogTemp, Warning, TEXT("You no longer overlap with weapon"));
-	if (!WeaponPickedUp)
+	if (!WeaponPickedUp && OtherActor)
 	{
+		AMovementCharacter* Char = Cast<AMovementCharacter>(OtherActor);
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("You no longer Overlap with weapon"));
+		if (Char)
+		{	
+			Char->PotentialWeapon = nullptr;
+			//Char->Weapon = nullptr;
+			Char->TriggerPickup(GetActorLocation());
+		}
 	}
 }
 
-//// Called every frame
-//void AWeaponBase::Tick(float DeltaTime)
-//{
-//	Super::Tick(DeltaTime);
-//
-//}
+UGunItem* AWeaponBase::GetWeaponInventoryItem()
+{
+	UGunItem* Item = nullptr;
+	if (WeaponInventoryItem)
+		Item = WeaponInventoryItem;
+	return Item;
+}
+
+
 

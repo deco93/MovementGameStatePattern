@@ -10,6 +10,10 @@
 #include "Sound/SoundCue.h"
 #include "MovementCharacter.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPickup, FVector, Location);
+
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPickup, FVector, Location, FText, WeaponName);
+
 UCLASS(config=Game)
 class AMovementCharacter : public ACharacter
 {
@@ -46,6 +50,12 @@ public:
 	virtual void BeginPlay() override;
 
 	void Jump();
+
+	void Pickup();
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegates")
+	FOnPickup OnPickup;
+
 protected:
 
 	
@@ -81,10 +91,11 @@ protected:
 	UFUNCTION()
 	void OnClimbComplete();
 
+public:
 	class SwimmingState* swimmingState;
 	class ClimbingState* climbingState;
+	class ArmedState* armedState;
 	class NinjaState* currentNinjaState;
-public:
 	class AMovementGameMode* GM;
 	float TraceDistance = 500.0f;
 	/** Returns CameraBoom subobject **/
@@ -114,15 +125,24 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Items")
 	void UseItem(class UItem* Item);
 
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<class AWeaponBase> WeaponClass;
+	/*UPROPERTY(EditAnywhere)
+	TSubclassOf<class AWeaponBase> WeaponClass;*/
 
 	UFUNCTION()
 	void AddToInventory(class UItem* Item);
+
+	UFUNCTION()
+	void RemoveFromInventory(class UItem* Item);
 	
+	//used when pickup prompt shown and later swapped with Weapon if 
+	//player already has a Weapon after existing weapon dropped else just assigned to Weapon
+	class AWeaponBase* PotentialWeapon;
+
 	class AWeaponBase* Weapon;
 
-	bool WeaponInHand = false;
-	void EquipWeaponToHand();
+	UFUNCTION()
+	void TriggerPickup(FVector Location);
+	/*bool WeaponInHand = false;
+	void EquipWeaponToHand();*/
 };
 
