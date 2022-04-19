@@ -113,5 +113,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Items")
 	void UseItem(class UItem* Item);
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class AWeaponBase> WeaponClass;
+
+	UFUNCTION()
+	void AddToInventory(class UItem* Item);
+	
+	class AWeaponBase* Weapon;
+
+	bool WeaponInHand = false;
+	void EquipWeaponToHand();
 };
 

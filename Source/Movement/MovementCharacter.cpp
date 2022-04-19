@@ -14,6 +14,7 @@
 #include "MovementGameMode.h"
 #include "Item.h"
 #include "InventoryComponent.h"
+#include "WeaponBase.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMovementCharacter
@@ -124,6 +125,21 @@ void AMovementCharacter::BeginPlay()
 	Super::BeginPlay();
 	UE_LOG(LogTemp, Warning, TEXT("inside beginplay of character"));
 	GM = Cast<AMovementGameMode>(GetWorld()->GetAuthGameMode());
+	/*if (WeaponClass)
+	{
+		FActorSpawnParameters WeaponSpawnParams;
+		WeaponSpawnParams.bNoFail = true;
+		WeaponSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		FTransform WeaponTransform;
+		WeaponTransform.SetLocation(FVector::ZeroVector);
+		WeaponTransform.SetRotation(FQuat(FRotator::ZeroRotator));
+
+		Weapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass, WeaponTransform, WeaponSpawnParams);
+		if (Weapon)
+		{
+			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
+		}
+	}*/
 }
 
 void AMovementCharacter::Jump()
@@ -318,5 +334,30 @@ void AMovementCharacter::UseItem(class UItem* Item)
 	{
 		Item->Use(this);
 		Item->OnUse(this);//this is bp implementation
+	}
+}
+
+void AMovementCharacter::AddToInventory(UItem* Item)
+{
+	if (Inventory)
+	{
+		Inventory->AddItem(Item);
+	}
+}
+
+void AMovementCharacter::EquipWeaponToHand()
+{
+	if (Weapon)
+	{
+		if (!WeaponInHand)
+		{
+			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
+			WeaponInHand = true;
+		}
+		else
+		{
+			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
+			WeaponInHand = false;
+		}
 	}
 }
