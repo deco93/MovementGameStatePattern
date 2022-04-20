@@ -11,6 +11,7 @@
 #include "MovementCharacter.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPickup, FVector, Location);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAim, bool, IsAim);
 
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPickup, FVector, Location, FText, WeaponName);
 
@@ -53,8 +54,15 @@ public:
 
 	void Pickup();
 
+	void Aim();
+
+	void StopAim();
+
 	UPROPERTY(BlueprintAssignable, Category = "Delegates")
 	FOnPickup OnPickup;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegates")
+	FOnAim OnAim;
 
 protected:
 
@@ -91,6 +99,9 @@ protected:
 	UFUNCTION()
 	void OnClimbComplete();
 
+	APlayerController* MovementCharacterPC;
+	int SizeX;//Viewport X size
+	int SizeY;//Viewport Y size
 public:
 	class SwimmingState* swimmingState;
 	class ClimbingState* climbingState;
@@ -98,6 +109,11 @@ public:
 	class NinjaState* currentNinjaState;
 	class AMovementGameMode* GM;
 	float TraceDistance = 500.0f;
+	FVector2D ScreenMiddleCoordinates;
+	FVector CrosshairProjectedWorldLocation;
+	FVector CrosshairProjectedWorldDirection;
+	FVector AimDirection;
+
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
@@ -109,6 +125,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	float GetLedgeHorizontalSpeed();
+
+	UFUNCTION(BlueprintCallable)
+	bool IsArmedWithGun();
+
+	UFUNCTION(BlueprintCallable)
+	bool IsAiming();
 
 	UPROPERTY(EditAnywhere)
 	USoundCue* JumpSound;
@@ -142,6 +164,11 @@ public:
 
 	UFUNCTION()
 	void TriggerPickup(FVector Location);
+
+	UFUNCTION()
+	void TriggerAimStatus(bool IsAim);
+
+	FVector GetCrosshairProjectedWorldLocation();
 	/*bool WeaponInHand = false;
 	void EquipWeaponToHand();*/
 };

@@ -36,6 +36,11 @@ void ArmedState::EquipWeaponToHand(AMovementCharacter* aMovementCharacter)
 		{
 			aMovementCharacter->Weapon->AttachToComponent(aMovementCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
 			WeaponInHand = false;
+			if (IsAiming)
+				IsAiming = false;
+
+			if (IsFiring)
+				IsFiring = false;
 		}
 	}
 }

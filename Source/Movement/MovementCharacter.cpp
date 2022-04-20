@@ -83,6 +83,8 @@ void AMovementCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMovementCharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 	PlayerInputComponent->BindAction("Pickup", IE_Released, this, &AMovementCharacter::Pickup);
+	PlayerInputComponent->BindAction("Aim", IE_Pressed, this, &AMovementCharacter::Aim);
+	PlayerInputComponent->BindAction("Aim", IE_Released, this, &AMovementCharacter::StopAim);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMovementCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMovementCharacter::MoveRight);
@@ -128,6 +130,12 @@ void AMovementCharacter::BeginPlay()
 	Super::BeginPlay();
 	UE_LOG(LogTemp, Warning, TEXT("inside beginplay of character"));
 	GM = Cast<AMovementGameMode>(GetWorld()->GetAuthGameMode());
+	MovementCharacterPC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	SizeX = 0, 
+	SizeY = 0;
+	MovementCharacterPC->GetViewportSize(SizeX, SizeY);
+	ScreenMiddleCoordinates.X = SizeX / 2.0f;
+	ScreenMiddleCoordinates.Y = SizeY / 2.0f;
 	/*if (WeaponClass)
 	{
 		FActorSpawnParameters WeaponSpawnParams;
@@ -147,8 +155,12 @@ void AMovementCharacter::BeginPlay()
 
 void AMovementCharacter::Jump()
 {
-	if(!GetCharacterMovement()->IsFalling())
+	if (!GetCharacterMovement()->IsFalling())
+	{
 		UGameplayStatics::PlaySound2D(GetWorld(),JumpSound);
+		if (armedState)
+			StopAim();
+	}
 	ACharacter::Jump();
 }
 
@@ -331,6 +343,24 @@ float AMovementCharacter::GetLedgeHorizontalSpeed()
 	return climbingState->LedgeHorizontalSpeed;
 }
 
+bool AMovementCharacter::IsArmedWithGun()
+{
+	if (armedState)
+	{
+		return armedState->WeaponInHand;
+	}
+	return false;
+}
+
+bool AMovementCharacter::IsAiming()
+{
+	if (armedState)
+	{
+		return armedState->WeaponInHand && armedState->IsAiming;
+	}
+	return false;
+}
+
 void AMovementCharacter::UseItem(class UItem* Item)
 {
 	if (Item)
@@ -363,6 +393,21 @@ void AMovementCharacter::TriggerPickup(FVector Location)
 	OnPickup.Broadcast(Location);
 }
 
+void AMovementCharacter::TriggerAimStatus(bool IsAim)
+{
+	OnAim.Broadcast(IsAim);
+}
+
+FVector AMovementCharacter::GetCrosshairProjectedWorldLocation()
+{
+	if (MovementCharacterPC)
+	{
+		MovementCharacterPC->DeprojectScreenPositionToWorld(ScreenMiddleCoordinates.X, ScreenMiddleCoordinates.Y, CrosshairProjectedWorldLocation, CrosshairProjectedWorldDirection);
+		return CrosshairProjectedWorldLocation;
+	}
+	return FVector(0,0,0);
+}
+
 void AMovementCharacter::Pickup()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Pressed Pickup"));
@@ -373,7 +418,10 @@ void AMovementCharacter::Pickup()
 		FVector NewWeaponLocation = PotentialWeapon->GetActorLocation();
 		TriggerPickup(PotentialWeapon->GetActorLocation());
 		PotentialWeapon->WeaponPickedUp = true;
-		PotentialWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
+		if(armedState && !armedState->WeaponInHand)
+			PotentialWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
+		else if(armedState && armedState->WeaponInHand)
+			PotentialWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
 		if (Weapon)
 		{
 			Weapon->DetachRootComponentFromParent(false);
@@ -382,13 +430,43 @@ void AMovementCharacter::Pickup()
 			TriggerPickup(Weapon->GetActorLocation());
 			RemoveFromInventory(Weapon->GetWeaponInventoryItem());
 			Weapon = PotentialWeapon;
+			PotentialWeapon = nullptr;
 		}
 		else
 		{
 			Weapon = PotentialWeapon;
+			PotentialWeapon = nullptr;
 		}
 		/*Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
 		Weapon->WeaponPickedUp = true;
 		TriggerPickup(Weapon->GetActorLocation());*/
+	}
+}
+
+void AMovementCharacter::Aim()
+{
+	if (armedState && armedState->WeaponInHand && !armedState->IsAiming && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Walking)
+	{
+		armedState->IsAiming = true;
+		GetCharacterMovement()->MaxWalkSpeed = 100.f;
+		TriggerAimStatus(armedState->IsAiming);//this is for notifying crosshair UI in level blueprint
+		GetCrosshairProjectedWorldLocation();
+		UE_LOG(LogTemp, Warning, TEXT("Current Crosshair world loc: (%f,%f,%f)"), CrosshairProjectedWorldLocation.X, CrosshairProjectedWorldLocation.Y, CrosshairProjectedWorldLocation.Z);
+		AimDirection = CrosshairProjectedWorldLocation - MovementCharacterPC->PlayerCameraManager->GetCameraLocation();
+		if (GM)
+		{
+			GM->DrawLineTrace(CrosshairProjectedWorldLocation, CrosshairProjectedWorldLocation+ AimDirection*1000.0f,FColor::Red, false, 10.0f);
+		}
+	}
+}
+
+void AMovementCharacter::StopAim()
+{
+	//if (armedState && armedState->WeaponInHand && armedState->IsAiming && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Walking)
+	if (armedState && armedState->WeaponInHand)
+	{
+		armedState->IsAiming = false;
+		GetCharacterMovement()->MaxWalkSpeed = 600.f;
+		TriggerAimStatus(armedState->IsAiming);
 	}
 }
