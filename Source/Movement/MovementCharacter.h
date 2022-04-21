@@ -12,6 +12,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPickup, FVector, Location);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAim, bool, IsAim);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnSurvivalStatsUIUpdate, bool, IsCutsVisible, float, WaterFill, float, FoodFill, float, BloodFill, float, HealthFill);
 
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPickup, FVector, Location, FText, WeaponName);
 
@@ -63,6 +64,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegates")
 	FOnAim OnAim;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegates")
+	FOnSurvivalStatsUIUpdate OnSurvivalStatsUIUpdate;
 
 protected:
 
@@ -141,8 +145,22 @@ public:
 	UPROPERTY(EditAnywhere)
 	USoundCue* SwimSound;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= "Health")
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SurvivalStats")
+	int Cuts;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SurvivalStats")
+	float Water;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SurvivalStats")
+	float Food;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SurvivalStats")
+	float Blood;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= "SurvivalStats")
 	float Health;
+
+
+
+
 
 	UFUNCTION(BlueprintCallable, Category = "Items")
 	void UseItem(class UItem* Item);

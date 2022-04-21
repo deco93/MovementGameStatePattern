@@ -32,3 +32,8 @@ FHitResult AMovementGameMode::DrawLineTrace(FVector Start, FVector End, FColor C
 		}
 	return OHit;
 }
+
+void AMovementGameMode::SetPlayerCharacter(AMovementCharacter* i_OurPlayerCharacter)
+{
+	OurPlayerCharacter = i_OurPlayerCharacter;
+}

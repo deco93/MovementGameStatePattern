@@ -17,8 +17,8 @@ public:
 	bool VisualizeDebug = true;
 	float DefaultTraceDistance = 2000.f;
 	FTimerHandle TIMER_HANDLE;
-
-	
+	class AMovementCharacter* OurPlayerCharacter;
+	void SetPlayerCharacter(class AMovementCharacter* i_OurPlayerCharacter);
 };
 
 

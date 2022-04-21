@@ -61,7 +61,11 @@ AMovementCharacter::AMovementCharacter()
 	swimmingState = new SwimmingState();
 	climbingState = new ClimbingState();
 	armedState = new ArmedState();
-	Health = 70.0f;
+	Water = 100.f;
+	Food = 100.f;
+	Blood = 100.f;
+	Health = 100.0f;
+	Cuts = 0;
 }
 
 AMovementCharacter::~AMovementCharacter()
@@ -136,6 +140,8 @@ void AMovementCharacter::BeginPlay()
 	MovementCharacterPC->GetViewportSize(SizeX, SizeY);
 	ScreenMiddleCoordinates.X = SizeX / 2.0f;
 	ScreenMiddleCoordinates.Y = SizeY / 2.0f;
+	if(GM)
+		GM->SetPlayerCharacter(this);
 	/*if (WeaponClass)
 	{
 		FActorSpawnParameters WeaponSpawnParams;
@@ -167,6 +173,29 @@ void AMovementCharacter::Jump()
 void AMovementCharacter::Tick(float DeltaSeconds)
 {
 	//UE_LOG(LogTemp, Warning, TEXT("inside char tick %d tick delta %f"), count++, DeltaSeconds);
+	Water -= 1.0f * DeltaSeconds;
+	Food -= 1.0f * DeltaSeconds;
+	Water = FMath::Clamp(Water,0.0f,100.0f);
+	Food = FMath::Clamp(Food,0.0f,100.0f);
+	Cuts = FMath::Clamp(Cuts, 0, 3);
+
+	if (Water < 25.0f || Food < 25.0f || Blood < 20.0f)
+	{
+		Health -= 1.0f * DeltaSeconds;
+		Health = FMath::Clamp(Health, 0.0f, 100.0f);
+	}
+	else if(Health <100.0f)
+	{
+		Health += 1.0f * DeltaSeconds;
+		Health = FMath::Clamp(Health, 0.0f, 100.0f);
+	}
+	if (Cuts > 0)
+	{
+		Blood -= 1.0f * DeltaSeconds*Cuts;
+		Blood = FMath::Clamp(Blood, 0.0f, 100.0f);
+	}
+	OnSurvivalStatsUIUpdate.Broadcast(Cuts>0, Water/100.0f, Food/100.0f, Blood/100.0f, Health/100.f);
+
 	if (swimmingState && swimmingState->InWater)
 	{
 		float CapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
