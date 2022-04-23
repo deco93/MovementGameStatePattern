@@ -427,6 +427,11 @@ void AMovementCharacter::TriggerAimStatus(bool IsAim)
 	OnAim.Broadcast(IsAim);
 }
 
+void AMovementCharacter::TakeDamage()
+{
+
+}
+
 FVector AMovementCharacter::GetCrosshairProjectedWorldLocation()
 {
 	if (MovementCharacterPC)

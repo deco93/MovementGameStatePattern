@@ -186,6 +186,10 @@ public:
 	UFUNCTION()
 	void TriggerAimStatus(bool IsAim);
 
+
+	UFUNCTION()
+	void TakeDamage();
+
 	FVector GetCrosshairProjectedWorldLocation();
 	/*bool WeaponInHand = false;
 	void EquipWeaponToHand();*/

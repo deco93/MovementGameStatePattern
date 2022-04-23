@@ -22,7 +22,7 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 	float search_radius_to_move_to_player = 2000.0f;
-	float attack_distance = 150.0f;
+	float attack_distance = 180.0f;
 private:
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "AI", meta = (AllowPrivateAccess = "true"))
 	class UBehaviorTreeComponent* behavior_tree_component;
@@ -42,5 +42,5 @@ private:
 
 	void setup_perception_system();
 
-	void OnAttackAnimationPlay();
+	//void OnAttackAnimationPlay();
 };

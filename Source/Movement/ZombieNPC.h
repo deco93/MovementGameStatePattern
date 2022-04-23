@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Sound/SoundCue.h"
+#include "Components/AudioComponent.h"
 #include "ZombieNPC.generated.h"
 
 UCLASS()
@@ -39,6 +40,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	USoundCue* HitSound;
+
+	UPROPERTY(EditAnywhere)
+	class UAudioComponent* ZombieAudioComponent;
 
 	float PATROL_SOUND_COOLDOWN = 7.0f;
 	float PatrolSoundCurrentCoolOff = PATROL_SOUND_COOLDOWN;

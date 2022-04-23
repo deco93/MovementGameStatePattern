@@ -18,7 +18,6 @@ EBTNodeResult::Type UBTTaskChasePlayer::ExecuteTask(UBehaviorTreeComponent& owne
 	FVector const player_location = ZombieNPCAIController->get_blackboard()->GetValueAsVector(bb_keys::target_location);
 
 	UAIBlueprintHelperLibrary::SimpleMoveToLocation(ZombieNPCAIController, player_location);
-
 	FinishLatentTask(owner_comp, EBTNodeResult::Succeeded);
 	return EBTNodeResult::Succeeded;
 }

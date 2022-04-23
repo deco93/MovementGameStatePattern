@@ -7,6 +7,7 @@
 #include "ZombieNPCAIController.h"
 #include <BehaviorTree/Blackboard/BlackboardKeyType_Vector.h>
 #include "BlackboardKeys.h"
+#include "GameFramework/Character.h"
 
 
 UBTTaskFindRandomLocation::UBTTaskFindRandomLocation(FObjectInitializer const& object_initializer)
@@ -27,6 +28,7 @@ EBTNodeResult::Type UBTTaskFindRandomLocation::ExecuteTask(UBehaviorTreeComponen
 	if (Nav_Sys->GetRandomPointInNavigableRadius(ZombieLocation, search_radius, RandomDestLocation, nullptr))
 	{
 		ZombieController->get_blackboard()->SetValueAsVector(bb_keys::target_location, RandomDestLocation.Location);
+		ZombieController->GetCharacter()->SetActorRotation((RandomDestLocation.Location- ZombieLocation).Rotation());
 	}
 
 	FinishLatentTask(owner_comp, EBTNodeResult::Succeeded);

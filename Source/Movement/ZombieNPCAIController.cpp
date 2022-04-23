@@ -17,6 +17,7 @@
 #include <Runtime/Engine/Classes/Kismet/GameplayStatics.h>
 #include <Runtime/Engine/Classes/Engine/World.h>
 #include <GameFramework/Character.h>
+#include "GameFramework/CharacterMovementComponent.h"
 
 AZombieNPCAIController::AZombieNPCAIController(FObjectInitializer const& object_initializer)
 {
@@ -60,16 +61,23 @@ void AZombieNPCAIController::Tick(float DeltaSeconds)
 	UE_LOG(LogTemp, Warning, TEXT("___Distance to MainPlayer %f"), DistanceToMainPlayer);
 	UNavigationSystemV1* const NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
 	FNavLocation RandomDestLocation;
+	
 	//else if (DistanceToMainPlayer <= search_radius_to_move_to_player )
 	if (DistanceToMainPlayer < attack_distance)
 	{
+		//ZombieNPC->GetMesh()->PlayAnimation(ZombieNPC->AttackAnimation,false);
+		//ZombieNPC->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+		UE_LOG(LogTemp, Warning, TEXT("**inside attack distance"));
 		get_blackboard()->SetValueAsBool(bb_keys::can_attack, true);
 		get_blackboard()->SetValueAsBool(bb_keys::can_move_to_player, false);
-		GetWorld()->GetTimerManager().SetTimer(GM->TIMER_HANDLE, this, &AZombieNPCAIController::OnAttackAnimationPlay, 1.0f, false);
+		if (ZombieNPC->ZombieAudioComponent->IsPlaying())
+			ZombieNPC->ZombieAudioComponent->Stop();
+		//GetWorld()->GetTimerManager().SetTimer(GM->TIMER_HANDLE, this, &AZombieNPCAIController::OnAttackAnimationPlay, 1.0f, false);
+		
 	}
 	else if (DistanceToMainPlayer <= search_radius_to_move_to_player && NavSys->GetRandomPointInNavigableRadius(OurPlayer->GetActorLocation(), 5.0f, RandomDestLocation, nullptr))
 	{
-		if (ZombieNPC->PatrolSoundCurrentCoolOff == ZombieNPC->PATROL_SOUND_COOLDOWN) 
+		/*if (ZombieNPC->PatrolSoundCurrentCoolOff == ZombieNPC->PATROL_SOUND_COOLDOWN) 
 		{
 			UGameplayStatics::PlaySound2D(GetWorld(), ZombieNPC->PatrolSound);
 			ZombieNPC->PatrolSoundCurrentCoolOff -= DeltaSeconds;
@@ -80,15 +88,27 @@ void AZombieNPCAIController::Tick(float DeltaSeconds)
 		}
 		else 
 		{
-			//RESET to max cooldown so it can be played again
+			
 			ZombieNPC->PatrolSoundCurrentCoolOff = ZombieNPC->PATROL_SOUND_COOLDOWN;
+		}*/
+		if (!ZombieNPC->ZombieAudioComponent->IsPlaying())
+		{
+			ZombieNPC->ZombieAudioComponent->SetSound(ZombieNPC->PatrolSound);
+			ZombieNPC->ZombieAudioComponent->Play();
 		}
-		get_blackboard()->SetValueAsVector(bb_keys::target_location, OurPlayer->GetActorLocation()+(this->GetCharacter()->GetActorLocation()- OurPlayer->GetActorLocation()).Normalize()*110.0f);
+		get_blackboard()->SetValueAsVector(bb_keys::target_location, OurPlayer->GetActorLocation()+(this->GetCharacter()->GetActorLocation()- OurPlayer->GetActorLocation()).Normalize()*40.0f);
+		//get_blackboard()->SetValueAsVector(bb_keys::target_location, OurPlayer->GetActorLocation());
 		get_blackboard()->SetValueAsBool(bb_keys::can_attack, false);
 		get_blackboard()->SetValueAsBool(bb_keys::can_move_to_player, true);
+		this->GetCharacter()->SetActorRotation((OurPlayer->GetActorLocation() - this->GetCharacter()->GetActorLocation()).Rotation());
 	}
 	else
 	{
+		if (!ZombieNPC->ZombieAudioComponent->IsPlaying())
+		{
+			ZombieNPC->ZombieAudioComponent->SetSound(ZombieNPC->PatrolSound);
+			ZombieNPC->ZombieAudioComponent->Play();
+		}
 		get_blackboard()->SetValueAsBool(bb_keys::can_attack, false);
 		get_blackboard()->SetValueAsBool(bb_keys::can_move_to_player, false);
 	}
@@ -126,7 +146,18 @@ void AZombieNPCAIController::setup_perception_system()
 
 }
 
-void AZombieNPCAIController::OnAttackAnimationPlay()
+/*void AZombieNPCAIController::OnAttackAnimationPlay()
 {
-	UGameplayStatics::PlaySound2D(GetWorld(), Cast<AZombieNPC>(this->GetCharacter())->HitSound);
-}
+	UE_LOG(LogTemp, Warning, TEXT("**inside OnAttackAnimationPlay"));
+	AZombieNPC* const ZombieNPC = Cast<AZombieNPC>(this->GetCharacter());
+	if (ZombieNPC)
+	{
+		if (ZombieNPC->ZombieAudioComponent->IsPlaying())
+		{
+			ZombieNPC->ZombieAudioComponent->Stop();
+		}
+		ZombieNPC->ZombieAudioComponent->SetSound(ZombieNPC->HitSound);
+		ZombieNPC->ZombieAudioComponent->Play();
+	}
+}*/
+

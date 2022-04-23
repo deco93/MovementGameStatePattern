@@ -9,11 +9,15 @@
 #include "MovementCharacter.h"
 #include <Perception/AISense_Sight.h>
 
+
 // Sets default values
 AZombieNPC::AZombieNPC()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	//this->bUseControllerRotationYaw = true;
+	ZombieAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("ZombieAudioComponent"));
+	RootComponent->SetupAttachment(ZombieAudioComponent);
 	//setup_stimulus();
 }
 
@@ -23,7 +27,10 @@ void AZombieNPC::BeginPlay()
 	Super::BeginPlay();
 	GetCharacterMovement()->MaxWalkSpeed = 100.f;
 	GM = Cast<AMovementGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	
+	if (ZombieAudioComponent && PatrolSound)
+	{
+		ZombieAudioComponent->SetSound(PatrolSound);
+	}
 }
 
 // Called every frame
