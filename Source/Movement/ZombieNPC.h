@@ -47,10 +47,23 @@ public:
 	float PATROL_SOUND_COOLDOWN = 7.0f;
 	float PatrolSoundCurrentCoolOff = PATROL_SOUND_COOLDOWN;
 
+	UPROPERTY(EditAnywhere)
+	float Health = 500.0f;
 
+	bool IsShot = false;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool IsChasing = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool IsDead = false;
+
+	void TakeDamage(float Damage);
+
+	FTimerHandle TIMER_HANDLE_Zombie;
+	void OnZombieDeath();
 private:
 	class UAIPerceptionStimuliSourceComponent* stimulus;
 	void setup_stimulus();
-
 	//void OnAttackAnimationComplete();
 };

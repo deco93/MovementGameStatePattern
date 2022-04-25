@@ -3,6 +3,12 @@
 
 #include "BandageItem.h"
 #include "MovementCharacter.h"
+#include "MovementGameMode.h"
+
+UBandageItem::UBandageItem()
+{
+	
+}
 
 void UBandageItem::Use(class AMovementCharacter* Character)
 {
@@ -14,3 +20,5 @@ void UBandageItem::Use(class AMovementCharacter* Character)
 	FString AfterMessage = FString::Printf(TEXT("Health after bandage use %f"), Character->Health);
 	GEngine->AddOnScreenDebugMessage(1,2,FColor::Green,AfterMessage);
 }
+
+

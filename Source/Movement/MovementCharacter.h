@@ -59,6 +59,10 @@ public:
 
 	void StopAim();
 
+	void Fire();
+
+	void StopFire();
+
 	UPROPERTY(BlueprintAssignable, Category = "Delegates")
 	FOnPickup OnPickup;
 
@@ -145,6 +149,15 @@ public:
 	UPROPERTY(EditAnywhere)
 	USoundCue* SwimSound;
 
+	UPROPERTY(EditAnywhere)
+	USoundCue* M4Sound;
+
+	UPROPERTY(EditAnywhere)
+	USoundCue* ASValSound;
+
+	UPROPERTY(EditAnywhere)
+	class UAudioComponent* PlayerAudioComponent;
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SurvivalStats")
 	int Cuts;
@@ -191,6 +204,9 @@ public:
 	void TakeDamage();
 
 	FVector GetCrosshairProjectedWorldLocation();
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class UItem> BandageInventoryItem;
 	/*bool WeaponInHand = false;
 	void EquipWeaponToHand();*/
 };

@@ -41,6 +41,8 @@ private:
 	void on_target_detected(AActor* actor, FAIStimulus const stimulus);
 
 	void setup_perception_system();
-
+	void AfterBeingShot();
+	class AMovementGameMode* GM;
+	FTimerHandle TIMER_HANDLE_AI;
 	//void OnAttackAnimationPlay();
 };

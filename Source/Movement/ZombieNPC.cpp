@@ -39,7 +39,12 @@ void AZombieNPC::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	const FVector MainCharLocation = GM->OurPlayerCharacter->GetActorLocation();
 	const FVector ZombieLocation = GetActorLocation(); 
-
+	if (Health <= 0.0f && IsDead == false)
+	{
+		IsDead = true;
+		GetCharacterMovement()->StopMovementImmediately();
+		GetWorld()->GetTimerManager().SetTimer(TIMER_HANDLE_Zombie, this, &AZombieNPC::OnZombieDeath, 3.6f, false);
+	}
 	/*if (FVector::Dist(ZombieLocation, MainCharLocation) < 150.0f)
 	{	
 		if (AttackAnimation)
@@ -58,11 +63,26 @@ void AZombieNPC::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 
 }
 
+void AZombieNPC::TakeDamage(float Damage)
+{
+	IsShot = true;
+	Health -= Damage;
+	Health =FMath::Clamp(Health, 0.0f, 500.0f);
+	//playing animation and sound effect done in BehaviorTree handled by ZombieNPCAIController
+}
+
 void AZombieNPC::setup_stimulus()
 {
 	stimulus = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("stimulus"));
 	stimulus->RegisterForSense(TSubclassOf<UAISense_Sight>());
 	stimulus->RegisterWithPerceptionSystem();
+}
+
+void AZombieNPC::OnZombieDeath()
+{
+	UE_LOG(LogTemp, Warning, TEXT("OnZombieDeath called"));
+	//TODO spawn a food/bandage/fishtrap/bottle
+	Destroy();
 }
 
 //void AZombieNPC::OnAttackAnimationComplete()

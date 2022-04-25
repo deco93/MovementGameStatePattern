@@ -33,6 +33,24 @@ FHitResult AMovementGameMode::DrawLineTrace(FVector Start, FVector End, FColor C
 	return OHit;
 }
 
+FHitResult AMovementGameMode::DrawLineTraceForFiring(FVector Start, FVector End, FColor Color, bool PersistentLine, float LifeTime)
+{
+	FHitResult OHit;
+
+	FCollisionQueryParams TraceParams;
+	UWorld* uWorld = GetWorld();
+	bool HitSuccess = uWorld->LineTraceSingleByChannel(OHit, Start, End, ECC_Pawn, TraceParams);
+	if (VisualizeDebug)
+	{
+		DrawDebugLine(uWorld, Start, End, Color, PersistentLine, LifeTime);
+		if (HitSuccess)
+		{
+			DrawDebugBox(uWorld, OHit.ImpactPoint, FVector(5, 5, 5), FColor::Green, PersistentLine, LifeTime);
+		}
+	}
+	return OHit;
+}
+
 void AMovementGameMode::SetPlayerCharacter(AMovementCharacter* i_OurPlayerCharacter)
 {
 	OurPlayerCharacter = i_OurPlayerCharacter;

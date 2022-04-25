@@ -11,4 +11,6 @@ namespace bb_keys
 	TCHAR const* const can_attack = TEXT("CanAttack");
 	TCHAR const* const can_move_to_player = TEXT("CanMoveToPlayer");
 	TCHAR const* const can_move_to_player_if_gun_shot = TEXT("CanMoveToPlayerIfGunShot");
+	TCHAR const* const is_shot = TEXT("IsShot");
+	TCHAR const* const is_dead = TEXT("IsDead");
 }

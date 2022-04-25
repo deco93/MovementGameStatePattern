@@ -13,8 +13,10 @@
 #include "ArmedState.h"
 #include "NinjaState.h"
 #include "MovementGameMode.h"
+#include "ZombieNPC.h"
 #include "Item.h"
 #include "InventoryComponent.h"
+#include "Components/AudioComponent.h"
 #include "WeaponBase.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -58,6 +60,21 @@ AMovementCharacter::AMovementCharacter()
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AMovementCharacter::OnBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &AMovementCharacter::OnEndOverlap);
+
+	PlayerAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("PlayerAudioComponent"));
+	RootComponent->SetupAttachment(PlayerAudioComponent);
+
+	static ConstructorHelpers::FObjectFinder<USoundCue> M4SoundCueClass(TEXT("SoundCue'/Game/Sounds/guns/M4_gun_shot_loop_Cue.M4_gun_shot_loop_Cue'"));
+	if (M4SoundCueClass.Succeeded())
+	{
+		M4Sound = M4SoundCueClass.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundCue> ASValSoundCueClass(TEXT("SoundCue'/Game/Sounds/guns/asval_gunshot_loop_Cue.asval_gunshot_loop_Cue'"));
+	if (ASValSoundCueClass.Succeeded())
+	{
+		ASValSound = ASValSoundCueClass.Object;
+	}
 	swimmingState = new SwimmingState();
 	climbingState = new ClimbingState();
 	armedState = new ArmedState();
@@ -89,6 +106,9 @@ void AMovementCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	PlayerInputComponent->BindAction("Pickup", IE_Released, this, &AMovementCharacter::Pickup);
 	PlayerInputComponent->BindAction("Aim", IE_Pressed, this, &AMovementCharacter::Aim);
 	PlayerInputComponent->BindAction("Aim", IE_Released, this, &AMovementCharacter::StopAim);
+
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMovementCharacter::Fire);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AMovementCharacter::StopFire);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMovementCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMovementCharacter::MoveRight);
@@ -135,6 +155,7 @@ void AMovementCharacter::BeginPlay()
 	UE_LOG(LogTemp, Warning, TEXT("inside beginplay of character"));
 	GM = Cast<AMovementGameMode>(GetWorld()->GetAuthGameMode());
 	MovementCharacterPC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	//InitUpVector = GetActorUpVector();
 	SizeX = 0, 
 	SizeY = 0;
 	MovementCharacterPC->GetViewportSize(SizeX, SizeY);
@@ -256,6 +277,36 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Hit failed"));
 			}*/
+		}
+	}
+	if (armedState && armedState->WeaponInHand && armedState->IsAiming)
+	{
+		GetCrosshairProjectedWorldLocation();
+		const FVector CameraLookDirectionFarPoint = (CrosshairProjectedWorldLocation + (CrosshairProjectedWorldLocation - MovementCharacterPC->PlayerCameraManager->GetCameraLocation()).GetSafeNormal() * 1000.f);
+
+		AimDirection = (CameraLookDirectionFarPoint - GetActorLocation()).GetSafeNormal();
+		SetActorRotation(AimDirection.Rotation());
+	}
+	if (armedState && armedState->WeaponInHand && armedState->IsAiming && armedState->IsFiring && !PlayerAudioComponent->IsPlaying())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Trying to play fire sound"));
+		PlayerAudioComponent->Play();
+
+		GetCrosshairProjectedWorldLocation();
+		UE_LOG(LogTemp, Warning, TEXT("Current Crosshair world loc: (%f,%f,%f)"), CrosshairProjectedWorldLocation.X, CrosshairProjectedWorldLocation.Y, CrosshairProjectedWorldLocation.Z);
+		AimDirection = CrosshairProjectedWorldLocation - MovementCharacterPC->PlayerCameraManager->GetCameraLocation();
+		if (GM)
+		{
+			FHitResult HResult = GM->DrawLineTraceForFiring(CrosshairProjectedWorldLocation, CrosshairProjectedWorldLocation + AimDirection * 1000.0f, FColor::Red, false, 10.0f);
+			if (HResult.bBlockingHit)
+			{
+				AZombieNPC* Zombie = Cast<AZombieNPC>(HResult.Actor);
+				if (Zombie)
+				{
+					Zombie->TakeDamage(50.0f);
+					UE_LOG(LogTemp, Warning, TEXT("---Zombie Hit--- Health now: %f"), Zombie->Health);
+				}
+			}
 		}
 	}
 }
@@ -484,13 +535,14 @@ void AMovementCharacter::Aim()
 		armedState->IsAiming = true;
 		GetCharacterMovement()->MaxWalkSpeed = 100.f;
 		TriggerAimStatus(armedState->IsAiming);//this is for notifying crosshair UI in level blueprint
-		GetCrosshairProjectedWorldLocation();
+		
+		/*GetCrosshairProjectedWorldLocation();
 		UE_LOG(LogTemp, Warning, TEXT("Current Crosshair world loc: (%f,%f,%f)"), CrosshairProjectedWorldLocation.X, CrosshairProjectedWorldLocation.Y, CrosshairProjectedWorldLocation.Z);
 		AimDirection = CrosshairProjectedWorldLocation - MovementCharacterPC->PlayerCameraManager->GetCameraLocation();
 		if (GM)
 		{
 			GM->DrawLineTrace(CrosshairProjectedWorldLocation, CrosshairProjectedWorldLocation+ AimDirection*1000.0f,FColor::Red, false, 10.0f);
-		}
+		}*/
 	}
 }
 
@@ -502,5 +554,38 @@ void AMovementCharacter::StopAim()
 		armedState->IsAiming = false;
 		GetCharacterMovement()->MaxWalkSpeed = 600.f;
 		TriggerAimStatus(armedState->IsAiming);
+	}
+	FRotator FollowCameraCurrentRotation = FollowCamera->GetForwardVector().Rotation();
+	FRotator CurrentPlayerRotation(0, FollowCameraCurrentRotation.Yaw, 0);
+	SetActorRotation(CurrentPlayerRotation);
+}
+
+void AMovementCharacter::Fire()
+{
+	if (armedState && armedState->WeaponInHand && armedState->IsAiming)
+	{
+		armedState->IsFiring = true;
+		//TODO take decision of whether M4 being fired or As-Val? whichever weapon is being fired
+		if (Weapon->WeaponInventoryItem->ItemDisplayName.ToString().Compare("M4-A1") == 0)//As-Val M4-A1
+		{	
+			PlayerAudioComponent->SetSound(M4Sound);
+		}
+		else if (Weapon->WeaponInventoryItem->ItemDisplayName.ToString().Compare("As-Val") == 0)
+		{
+			PlayerAudioComponent->SetSound(ASValSound);
+		}
+		//PlayerAudioComponent->Play();
+	}
+}
+
+void AMovementCharacter::StopFire()
+{
+	if (armedState)
+	{
+		armedState->IsFiring = false;
+		if (PlayerAudioComponent->IsPlaying())
+		{
+			PlayerAudioComponent->Stop();
+		}
 	}
 }
