@@ -12,7 +12,8 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPickup, FVector, Location);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAim, bool, IsAim);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnSurvivalStatsUIUpdate, bool, IsCutsVisible, float, WaterFill, float, FoodFill, float, BloodFill, float, HealthFill);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FOnSurvivalStatsUIUpdate, int, CutsCount,bool, IsCutsVisible, float, WaterFill, float, FoodFill, float, BloodFill, float, HealthFill);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
 
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPickup, FVector, Location, FText, WeaponName);
 
@@ -73,6 +74,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegates")
 	FOnSurvivalStatsUIUpdate OnSurvivalStatsUIUpdate;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegates")
+	FOnDeath OnDeathOfCharacter;
 
 protected:
 
@@ -173,6 +177,9 @@ public:
 	USoundCue* AppleEatingSound;
 
 	UPROPERTY(EditAnywhere)
+	USoundCue* NinjaHitSound;
+
+	UPROPERTY(EditAnywhere)
 	class UAudioComponent* PlayerAudioComponent;
 
 	UPROPERTY(EditAnywhere)
@@ -180,6 +187,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	class UAnimMontage* WaterBottleAnimation;
+
+	UPROPERTY(EditAnywhere)
+	class UAnimMontage* TakeDamageHitAnimation;
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SurvivalStats")
@@ -225,6 +235,9 @@ public:
 
 	UFUNCTION()
 	void TakeDamage();
+
+	UFUNCTION()
+	void OnTakingDamage();
 
 	FVector GetCrosshairProjectedWorldLocation();
 

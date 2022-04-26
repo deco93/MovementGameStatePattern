@@ -63,10 +63,9 @@ public:
 	FTimerHandle TIMER_HANDLE_Zombie;
 	void OnZombieDeath();
 
-	/*UPROPERTY(EditAnywhere)
-	TSubclassOf<AActor> WaterBottleToSpawn;*/
-
-	//class APickupWater* PickupWater;
+	/*UPROPERTY(BlueprintReadWrite)
+	bool SendAttack = false;*/
+	
 
 private:
 	class UAIPerceptionStimuliSourceComponent* stimulus;

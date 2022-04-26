@@ -78,22 +78,30 @@ void AZombieNPCAIController::Tick(float DeltaSeconds)
 	}
 	else if (DistanceToMainPlayer < attack_distance)
 	{
-		//ZombieNPC->GetMesh()->PlayAnimation(ZombieNPC->AttackAnimation,false);
-		//ZombieNPC->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+		
 		
 		//UE_LOG(LogTemp, Warning, TEXT("**inside attack distance"));
-		ZombieNPC->GetCharacterMovement()->StopMovementImmediately();
-		get_blackboard()->SetValueAsBool(bb_keys::can_attack, true);
-		get_blackboard()->SetValueAsBool(bb_keys::can_move_to_player, false);
-		if (ZombieNPC->ZombieAudioComponent->IsPlaying())
-			ZombieNPC->ZombieAudioComponent->Stop();
-		ZombieNPC->IsChasing = false;
-		//GetWorld()->GetTimerManager().SetTimer(GM->TIMER_HANDLE, this, &AZombieNPCAIController::OnAttackAnimationPlay, 1.0f, false);
-		
+		if (get_blackboard()->GetValueAsBool(bb_keys::can_attack) == false)
+		{
+			
+			ZombieNPC->GetCharacterMovement()->StopMovementImmediately();
+			get_blackboard()->SetValueAsBool(bb_keys::can_attack, true);
+			get_blackboard()->SetValueAsBool(bb_keys::can_move_to_player, false);
+			if (ZombieNPC->ZombieAudioComponent->IsPlaying())
+				ZombieNPC->ZombieAudioComponent->Stop();
+			ZombieNPC->IsChasing = false;
+			OurPlayer->TakeDamage();
+		}
+		/*if (ZombieNPC->SendAttack)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("inside ZombieNPC->SendAttack true"));
+			OurPlayer->TakeDamage();
+			ZombieNPC->SendAttack = false;
+		}*/
 	}
 	else if (DistanceToMainPlayer <= search_radius_to_move_to_player && NavSys->GetRandomPointInNavigableRadius(OurPlayer->GetActorLocation(), 5.0f, RandomDestLocation, nullptr))
 	{
-		ZombieNPC->GetCharacterMovement()->MaxWalkSpeed = 700.0f;
+		ZombieNPC->GetCharacterMovement()->MaxWalkSpeed = 580.0f;
 		if (!ZombieNPC->ZombieAudioComponent->IsPlaying())
 		{
 			ZombieNPC->ZombieAudioComponent->SetSound(ZombieNPC->PatrolSound);
@@ -161,6 +169,8 @@ void AZombieNPCAIController::AfterBeingShot()
 	AZombieNPC* const ZombieNPC = Cast<AZombieNPC>(this->GetCharacter());
 	get_blackboard()->SetValueAsBool(bb_keys::is_shot, false);
 }
+
+
 
 /*void AZombieNPCAIController::OnAttackAnimationPlay()
 {

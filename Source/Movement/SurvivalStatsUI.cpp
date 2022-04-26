@@ -4,6 +4,7 @@
 #include "SurvivalStatsUI.h"
 #include "Components/ProgressBar.h"
 #include "Components/Image.h"
+#include "Components/TextBlock.h"
 
 void USurvivalStatsUI::NativeConstruct()
 {
@@ -13,7 +14,8 @@ void USurvivalStatsUI::NativeConstruct()
 	{
 		PickupText->SetVisibility(ESlateVisibility::Hidden);
 	}*/
-
+	if (CutsCount)
+		SetCutsCount(0);
 	if (Cuts)
 		SetCutsVisibility(false);
 
@@ -59,5 +61,33 @@ void USurvivalStatsUI::SetCutsVisibility(bool IsVisible)
 			Cuts->SetVisibility(ESlateVisibility::Visible);
 		else
 			Cuts->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+void USurvivalStatsUI::SetCutsCount(int i_Cuts)
+{
+	if (CutsCount)
+	{
+		if (i_Cuts >0)
+		{
+			CutsCount->SetText(FText::FromString(FString::FromInt(i_Cuts)));
+			SetCutsCountVisibility(true);
+		}
+		else
+		{
+			CutsCount->SetText(FText::FromString(FString::FromInt(0)));
+			SetCutsCountVisibility(false);
+		}
+	}
+}
+
+void USurvivalStatsUI::SetCutsCountVisibility(bool IsVisible)
+{
+	if (CutsCount)
+	{
+		if(IsVisible)
+			CutsCount->SetVisibility(ESlateVisibility::Visible);
+		else
+			CutsCount->SetVisibility(ESlateVisibility::Hidden);
 	}
 }

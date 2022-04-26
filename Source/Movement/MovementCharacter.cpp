@@ -81,7 +81,7 @@ AMovementCharacter::AMovementCharacter()
 	armedState = new ArmedState();
 	Water = 100.f;
 	Food = 100.f;
-	Blood = 100.f;
+	Blood = 100.0f;
 	Health = 100.0f;
 	Cuts = 0;
 }
@@ -161,7 +161,6 @@ void AMovementCharacter::BeginPlay()
 	//InitUpVector = GetActorUpVector();
 	SizeX = 0, 
 	SizeY = 0;
-	Cuts = 1;
 	MovementCharacterPC->GetViewportSize(SizeX, SizeY);
 	ScreenMiddleCoordinates.X = SizeX / 2.0f;
 	ScreenMiddleCoordinates.Y = SizeY / 2.0f;
@@ -226,8 +225,9 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 		Blood = FMath::Clamp(Blood, 0.0f, 100.0f);
 	}
 
-	OnSurvivalStatsUIUpdate.Broadcast(Cuts>0, Water/100.0f, Food/100.0f, Blood/100.0f, Health/100.f);
-
+	OnSurvivalStatsUIUpdate.Broadcast(Cuts,Cuts>0, Water/100.0f, Food/100.0f, Blood/100.0f, Health/100.f);
+	if(Health<=0.0f)
+		OnDeathOfCharacter.Broadcast();
 	if (swimmingState && swimmingState->InWater)
 	{
 		float CapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
@@ -300,9 +300,20 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 	}
 	if (armedState && armedState->WeaponInHand && armedState->IsAiming && armedState->IsFiring && !PlayerAudioComponent->IsPlaying())
 	{
+		if (Weapon->Durability <= 0)
+		{
+			Weapon->DetachRootComponentFromParent(false);
+			RemoveFromInventory(Weapon->WeaponInventoryItem);
+			Weapon->Destroy();
+			Weapon = nullptr;
+			StopAim();
+			armedState->WeaponInHand = false;
+			armedState->IsFiring = false;
+			return;
+		}
 		UE_LOG(LogTemp, Warning, TEXT("Trying to play fire sound"));
 		PlayerAudioComponent->Play();
-
+		Weapon->Durability -= 1;
 		GetCrosshairProjectedWorldLocation();
 		UE_LOG(LogTemp, Warning, TEXT("Current Crosshair world loc: (%f,%f,%f)"), CrosshairProjectedWorldLocation.X, CrosshairProjectedWorldLocation.Y, CrosshairProjectedWorldLocation.Z);
 		AimDirection = CrosshairProjectedWorldLocation - MovementCharacterPC->PlayerCameraManager->GetCameraLocation();
@@ -314,7 +325,8 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 				AZombieNPC* Zombie = Cast<AZombieNPC>(HResult.Actor);
 				if (Zombie)
 				{
-					Zombie->TakeDamage(50.0f);
+					//Zombie->TakeDamage(50.0f);
+					Zombie->TakeDamage(Weapon->WeaponInventoryItem->Damage);
 					UE_LOG(LogTemp, Warning, TEXT("---Zombie Hit--- Health now: %f"), Zombie->Health);
 				}
 			}
@@ -493,7 +505,28 @@ void AMovementCharacter::TriggerAimStatus(bool IsAim)
 
 void AMovementCharacter::TakeDamage()
 {
+	
+		GetWorld()->GetTimerManager().SetTimer(CHARACTER_TIMER_HANDLE, this, &AMovementCharacter::OnTakingDamage, 1.4f, false);
+	
+}
 
+void AMovementCharacter::OnTakingDamage()
+{
+	if (TakeDamageHitAnimation && !GetMesh()->GetAnimInstance()->Montage_IsPlaying(TakeDamageHitAnimation))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NinjaHit montage played..."));
+		PlayAnimMontage(TakeDamageHitAnimation, 2.0f, FName("Default"));
+		Health -= 5.0f;
+		Cuts++;
+		//Cuts = FMath::Clamp(Cuts, 0, 4);
+		if (PlayerAudioComponent && NinjaHitSound)
+		{
+			if (PlayerAudioComponent->IsPlaying())
+				PlayerAudioComponent->Stop();
+			PlayerAudioComponent->SetSound(NinjaHitSound);
+			PlayerAudioComponent->Play();
+		}
+	}
 }
 
 FVector AMovementCharacter::GetCrosshairProjectedWorldLocation()

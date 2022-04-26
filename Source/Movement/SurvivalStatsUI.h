@@ -17,6 +17,9 @@ class MOVEMENT_API USurvivalStatsUI : public UUserWidget
 	void NativeConstruct() override;
 
 	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* CutsCount;
+
+	UPROPERTY(meta = (BindWidget))
 	class UImage* Cuts;
 
 	UPROPERTY(meta = (BindWidget))
@@ -45,4 +48,10 @@ class MOVEMENT_API USurvivalStatsUI : public UUserWidget
 
 	UFUNCTION(BlueprintCallable)
 	void SetCutsVisibility(bool IsVisible);
+
+	UFUNCTION(BlueprintCallable)
+	void SetCutsCount(int i_Cuts);
+
+	UFUNCTION(BlueprintCallable)
+	void SetCutsCountVisibility(bool IsVisible);
 };

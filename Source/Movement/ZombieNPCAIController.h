@@ -42,6 +42,8 @@ private:
 
 	void setup_perception_system();
 	void AfterBeingShot();
+
+	//void OnAttacking();
 	class AMovementGameMode* GM;
 	FTimerHandle TIMER_HANDLE_AI;
 	//void OnAttackAnimationPlay();

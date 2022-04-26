@@ -29,6 +29,8 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	class UGunItem* WeaponInventoryItem;
+
+	int Durability = 30;
 	
 	void Fire();
 
