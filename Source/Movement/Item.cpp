@@ -14,3 +14,8 @@ void UItem::Use(AMovementCharacter* Character)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Use of Item clicked, name: %s"), *ItemDisplayName.ToString());
 }
+
+void UItem::SetMappedItem(class IPickupInterface* MappedItem)
+{
+	UE_LOG(LogTemp, Warning, TEXT("SetMappedItem called inside UItem"));
+}

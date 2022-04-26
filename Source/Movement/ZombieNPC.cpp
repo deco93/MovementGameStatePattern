@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "MovementGameMode.h"
 #include "MovementCharacter.h"
+#include "PickupWater.h"
 #include <Perception/AISense_Sight.h>
 
 
@@ -18,6 +19,12 @@ AZombieNPC::AZombieNPC()
 	//this->bUseControllerRotationYaw = true;
 	ZombieAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("ZombieAudioComponent"));
 	RootComponent->SetupAttachment(ZombieAudioComponent);
+
+	/*static ConstructorHelpers::FObjectFinder<APickupWater> PickupWaterBP(TEXT("Blueprint'/Game/ThirdPersonCPP/Blueprints/Spawnables/BP_WaterBottlePickup.BP_WaterBottlePickup'"));
+	if (PickupWaterBP.Succeeded())
+	{
+		PickupWater = PickupWaterBP.Object;
+	}*/
 	//setup_stimulus();
 }
 
@@ -82,6 +89,10 @@ void AZombieNPC::OnZombieDeath()
 {
 	UE_LOG(LogTemp, Warning, TEXT("OnZombieDeath called"));
 	//TODO spawn a food/bandage/fishtrap/bottle
+	/*FVector DirectionTowardsPlayer = (GM->OurPlayerCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+	FVector LocationApproxBetweenZombieAndPlayer = GetActorLocation() + DirectionTowardsPlayer * 25.0f;
+	FRotator PlayerRotation(0, GM->OurPlayerCharacter->GetActorRotation().Yaw,0);
+	GetWorld()->SpawnActor<APickupWater>(WaterBottleToSpawn, LocationApproxBetweenZombieAndPlayer, PlayerRotation);*/
 	Destroy();
 }
 

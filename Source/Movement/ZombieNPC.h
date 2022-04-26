@@ -62,6 +62,12 @@ public:
 
 	FTimerHandle TIMER_HANDLE_Zombie;
 	void OnZombieDeath();
+
+	/*UPROPERTY(EditAnywhere)
+	TSubclassOf<AActor> WaterBottleToSpawn;*/
+
+	//class APickupWater* PickupWater;
+
 private:
 	class UAIPerceptionStimuliSourceComponent* stimulus;
 	void setup_stimulus();

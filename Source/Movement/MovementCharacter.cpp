@@ -18,6 +18,7 @@
 #include "InventoryComponent.h"
 #include "Components/AudioComponent.h"
 #include "WeaponBase.h"
+#include "PickupInterface.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMovementCharacter
@@ -107,6 +108,8 @@ void AMovementCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	PlayerInputComponent->BindAction("Aim", IE_Pressed, this, &AMovementCharacter::Aim);
 	PlayerInputComponent->BindAction("Aim", IE_Released, this, &AMovementCharacter::StopAim);
 
+	PlayerInputComponent->BindAction("Use", IE_Released, this, &AMovementCharacter::Use);
+
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMovementCharacter::Fire);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AMovementCharacter::StopFire);
 
@@ -158,6 +161,7 @@ void AMovementCharacter::BeginPlay()
 	//InitUpVector = GetActorUpVector();
 	SizeX = 0, 
 	SizeY = 0;
+	Cuts = 1;
 	MovementCharacterPC->GetViewportSize(SizeX, SizeY);
 	ScreenMiddleCoordinates.X = SizeX / 2.0f;
 	ScreenMiddleCoordinates.Y = SizeY / 2.0f;
@@ -178,6 +182,7 @@ void AMovementCharacter::BeginPlay()
 			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
 		}
 	}*/
+	
 }
 
 void AMovementCharacter::Jump()
@@ -215,6 +220,12 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 		Blood -= 1.0f * DeltaSeconds*Cuts;
 		Blood = FMath::Clamp(Blood, 0.0f, 100.0f);
 	}
+	else if (Water >= 25.0f && Food >= 25.0f && Blood <100.0f)
+	{
+		Blood += 1.0f * DeltaSeconds*0.5f;
+		Blood = FMath::Clamp(Blood, 0.0f, 100.0f);
+	}
+
 	OnSurvivalStatsUIUpdate.Broadcast(Cuts>0, Water/100.0f, Food/100.0f, Blood/100.0f, Health/100.f);
 
 	if (swimmingState && swimmingState->InWater)
@@ -404,6 +415,8 @@ void AMovementCharacter::OnClimbComplete()
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 }
 
+
+
 void AMovementCharacter::SetTimer()
 {
 	if (currentNinjaState)
@@ -587,5 +600,13 @@ void AMovementCharacter::StopFire()
 		{
 			PlayerAudioComponent->Stop();
 		}
+	}
+}
+
+void AMovementCharacter::Use()
+{
+	if (armedState && !armedState->WeaponInHand && CurrentPickupItemInHand)
+	{
+		CurrentPickupItemInHand->Consume();
 	}
 }

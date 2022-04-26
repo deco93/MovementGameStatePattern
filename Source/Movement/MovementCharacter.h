@@ -63,6 +63,8 @@ public:
 
 	void StopFire();
 
+	void Use();
+
 	UPROPERTY(BlueprintAssignable, Category = "Delegates")
 	FOnPickup OnPickup;
 
@@ -107,6 +109,9 @@ protected:
 	UFUNCTION()
 	void OnClimbComplete();
 
+	/*UFUNCTION()
+	void OnBandageComplete();*/
+
 	APlayerController* MovementCharacterPC;
 	int SizeX;//Viewport X size
 	int SizeY;//Viewport Y size
@@ -121,6 +126,9 @@ public:
 	FVector CrosshairProjectedWorldLocation;
 	FVector CrosshairProjectedWorldDirection;
 	FVector AimDirection;
+
+	class IPickupInterface* CurrentPickupItemInHand = nullptr;
+	class UItem* CurrentInventoryItemInHand = nullptr;
 
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -156,7 +164,22 @@ public:
 	USoundCue* ASValSound;
 
 	UPROPERTY(EditAnywhere)
+	USoundCue* BandageSound;
+
+	UPROPERTY(EditAnywhere)
+	USoundCue* WaterSound;
+
+	UPROPERTY(EditAnywhere)
+	USoundCue* AppleEatingSound;
+
+	UPROPERTY(EditAnywhere)
 	class UAudioComponent* PlayerAudioComponent;
+
+	UPROPERTY(EditAnywhere)
+	class UAnimMontage* BandageAnimation;
+
+	UPROPERTY(EditAnywhere)
+	class UAnimMontage* WaterBottleAnimation;
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SurvivalStats")
@@ -207,6 +230,15 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<class UItem> BandageInventoryItem;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class UItem> WaterBottleInventoryItem;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class UItem> FoodInventoryItem;
+
+
+	FTimerHandle CHARACTER_TIMER_HANDLE;
 	/*bool WeaponInHand = false;
 	void EquipWeaponToHand();*/
 };

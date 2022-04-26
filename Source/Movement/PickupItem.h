@@ -24,10 +24,10 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	UFUNCTION()
-	void OnOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
 
 	UFUNCTION()
-	void OnOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	void OnOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) override;
 
 	UPROPERTY(EditAnywhere)
 	class UStaticMeshComponent* PickupSMComp;
@@ -36,11 +36,18 @@ public:
 
 	/*UPROPERTY(EditAnywhere)
 	class UBandageItem*  BandageInventoryItem;*/
-
+	class AMovementCharacter* PlayerCharacter;
 
 	void Consume() override;
 	void Pickup() override;
 	void Equip() override;
 	void UnEquip() override;
 	bool InHand() override;
+
+	UFUNCTION()
+	void OnConsume();
+	FTimerHandle BANDAGE_TIMER_HANDLE;
+
+	class UStaticMeshComponent* GetStaticMeshComp() override;
+	class UBoxComponent* GetBoxComponent() override;
 };

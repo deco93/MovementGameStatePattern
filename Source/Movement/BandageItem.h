@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Item.h"
-#include "PickupInterface.h"
 #include "BandageItem.generated.h"
 
 /**
@@ -15,9 +14,10 @@ class MOVEMENT_API UBandageItem : public UItem
 {
 	GENERATED_BODY()
 public :
-	class AMovementCharacter* PlayerCharacter;
 	UBandageItem();
-protected:
-	virtual void Use(class AMovementCharacter* Character) override;
+	class AMovementCharacter* PlayerCharacter;
+	class IPickupInterface* MappedPickupItem;
+	void Use(class AMovementCharacter* Character) override;
+	void SetMappedItem(class IPickupInterface* MappedItem) override;
 
 };

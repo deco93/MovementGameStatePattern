@@ -3,6 +3,7 @@
 
 #include "ArmedState.h"
 #include "MovementCharacter.h"
+#include "PickupInterface.h"
 #include "WeaponBase.h"
 
 ArmedState::ArmedState()
@@ -29,6 +30,11 @@ void ArmedState::EquipWeaponToHand(AMovementCharacter* aMovementCharacter)
 	{
 		if (!WeaponInHand)
 		{
+			if (aMovementCharacter->CurrentPickupItemInHand)
+			{
+				aMovementCharacter->CurrentPickupItemInHand->GetStaticMeshComp()->DetachFromParent();
+				aMovementCharacter->CurrentPickupItemInHand = nullptr;
+			}
 			aMovementCharacter->Weapon->AttachToComponent(aMovementCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
 			WeaponInHand = true;
 		}

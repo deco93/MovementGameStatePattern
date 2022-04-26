@@ -46,4 +46,6 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)//this one is for implementation in BP
 	void OnUse(class AMovementCharacter* Character);
+
+	virtual void SetMappedItem(class IPickupInterface* MappedItem);
 };
