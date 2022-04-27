@@ -17,7 +17,10 @@ public:
 	virtual void Update(AMovementCharacter* aMovementCharacter) override;
 
 	void EquipWeaponToHand(AMovementCharacter* aMovementCharacter);
+	UPROPERTY()
 	bool WeaponInHand = false;
+	UPROPERTY()
 	bool IsAiming = false;
+	UPROPERTY()
 	bool IsFiring = false;
 };

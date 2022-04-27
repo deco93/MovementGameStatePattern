@@ -114,8 +114,11 @@ void APickupFood::UnEquip()
 {
 	if (PlayerCharacter && PlayerCharacter->CurrentPickupItemInHand)//means current item in hand is same as the bandage being tried to Use
 	{
-		if(PlayerCharacter->CurrentPickupItemInHand->GetStaticMeshComp())
+		/*if (PlayerCharacter->CurrentPickupItemInHand->GetStaticMeshComp())
+		{
 			PlayerCharacter->CurrentPickupItemInHand->GetStaticMeshComp()->DetachFromParent();
+		}*/
+		PlayerCharacter->CurrentPickupItemInHand->DetachFromCharacterSocket();
 		PlayerCharacter->CurrentPickupItemInHand = nullptr;
 	}
 }
@@ -123,6 +126,11 @@ void APickupFood::UnEquip()
 bool APickupFood::InHand()
 {
 	return false;
+}
+
+void APickupFood::DetachFromCharacterSocket()
+{
+	DetachRootComponentFromParent(false);
 }
 
 void APickupFood::OnConsume()

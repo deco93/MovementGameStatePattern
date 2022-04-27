@@ -27,7 +27,7 @@ AZombieNPCAIController::AZombieNPCAIController(FObjectInitializer const& object_
 		btree = obj.Object;
 	}
 	behavior_tree_component = object_initializer.CreateDefaultSubobject<UBehaviorTreeComponent>(this, TEXT("BehaviorTreeComponent"));
-	blackboard = object_initializer.CreateDefaultSubobject<UBlackboardComponent>(this, TEXT("BlackboardComponent"));
+	myblackboard = object_initializer.CreateDefaultSubobject<UBlackboardComponent>(this, TEXT("BlackboardComponent"));
 	//setup_perception_system();
 }
 
@@ -42,15 +42,15 @@ void AZombieNPCAIController::BeginPlay()
 void AZombieNPCAIController::OnPossess(APawn* const pawn)
 {
 	Super::OnPossess(pawn);
-	if(blackboard)
+	if(myblackboard)
 	{ 
-		blackboard->InitializeBlackboard(*btree->BlackboardAsset);
+		myblackboard->InitializeBlackboard(*btree->BlackboardAsset);
 	}
 }
 
 UBlackboardComponent* AZombieNPCAIController::get_blackboard() const
 {
-	return blackboard;
+	return myblackboard;
 }
 
 void AZombieNPCAIController::Tick(float DeltaSeconds)

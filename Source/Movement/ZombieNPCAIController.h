@@ -30,8 +30,9 @@ private:
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "AI", meta = (AllowPrivateAccess = "true"))
 	class UBehaviorTree* btree;
 
-	class UBlackboardComponent* blackboard;
-
+	UPROPERTY()
+	class UBlackboardComponent* myblackboard;
+	UPROPERTY()
 	class UAISenseConfig_Sight* sight_config;
 
 	UFUNCTION()
@@ -44,6 +45,7 @@ private:
 	void AfterBeingShot();
 
 	//void OnAttacking();
+	UPROPERTY()
 	class AMovementGameMode* GM;
 	FTimerHandle TIMER_HANDLE_AI;
 	//void OnAttackAnimationPlay();

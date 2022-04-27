@@ -35,6 +35,8 @@ public:
 	UFUNCTION()
 	virtual bool InHand() = 0;
 	UFUNCTION()
+	virtual void DetachFromCharacterSocket() = 0;
+	UFUNCTION()
 	virtual class UStaticMeshComponent* GetStaticMeshComp() = 0;
 	UFUNCTION()
 	virtual class UBoxComponent* GetBoxComponent() = 0;

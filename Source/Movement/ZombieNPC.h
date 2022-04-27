@@ -27,12 +27,16 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	UPROPERTY()
 	class AMovementCharacter* OurPlayerCharacter;
+	UPROPERTY()
 	class AMovementGameMode* GM;
 	UPROPERTY(EditDefaultsOnly)
 	class UAnimationAsset* AttackAnimation;
 
+	UPROPERTY()
 	class AController* NPCAiController;
+	UPROPERTY()
 	class APawn* NPCAiPawn;
 
 	UPROPERTY(EditAnywhere)
@@ -68,6 +72,7 @@ public:
 	
 
 private:
+	UPROPERTY()
 	class UAIPerceptionStimuliSourceComponent* stimulus;
 	void setup_stimulus();
 	//void OnAttackAnimationComplete();

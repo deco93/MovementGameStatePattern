@@ -59,7 +59,7 @@ void UBandageItem::Use(class AMovementCharacter* Character)
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("Unequip called"));
 		MappedPickupItem->UnEquip();
-		Character->CurrentInventoryItemInHand = nullptr;
+		//Character->CurrentInventoryItemInHand = nullptr;
 	}
 	else if (Character && MappedPickupItem)
 	{

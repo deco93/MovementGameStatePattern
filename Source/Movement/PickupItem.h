@@ -36,6 +36,7 @@ public:
 
 	/*UPROPERTY(EditAnywhere)
 	class UBandageItem*  BandageInventoryItem;*/
+	UPROPERTY()
 	class AMovementCharacter* PlayerCharacter;
 
 	void Consume() override;
@@ -43,7 +44,7 @@ public:
 	void Equip() override;
 	void UnEquip() override;
 	bool InHand() override;
-
+	void DetachFromCharacterSocket() override;
 	UFUNCTION()
 	void OnConsume();
 	FTimerHandle BANDAGE_TIMER_HANDLE;

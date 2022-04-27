@@ -16,10 +16,10 @@ class MOVEMENT_API UItem : public UObject
 public:
 	UItem();
 
-	virtual class UWorld* GetWorld() const { return World; };
+	/*virtual class UWorld* GetWorld() const { return World; };
 
 	UPROPERTY(Transient)
-	class UWorld* World;
+	class UWorld* World;*/
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Item")
 	FText UseActionTextDetail;
@@ -41,11 +41,11 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Item")
 	class UInventoryComponent* OwningInventory;
-
+	//UFUNCTION()
 	virtual void Use(class AMovementCharacter* Character);
 
-	UFUNCTION(BlueprintImplementableEvent)//this one is for implementation in BP
-	void OnUse(class AMovementCharacter* Character);
-
+	//UFUNCTION(BlueprintImplementableEvent)//this one is for implementation in BP
+	//void OnUse(class AMovementCharacter* Character);
+	//UFUNCTION()
 	virtual void SetMappedItem(class IPickupInterface* MappedItem);
 };

@@ -15,6 +15,7 @@ class MOVEMENT_API UWaterItem : public UItem
 	GENERATED_BODY()
 public:
 	UWaterItem();
+	UPROPERTY()
 	class AMovementCharacter* PlayerCharacter;
 	class IPickupInterface* MappedPickupItem;
 	void Use(class AMovementCharacter* Character) override;

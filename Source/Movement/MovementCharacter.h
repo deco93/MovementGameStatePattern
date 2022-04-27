@@ -115,15 +115,20 @@ protected:
 
 	/*UFUNCTION()
 	void OnBandageComplete();*/
-
+	UPROPERTY()
 	APlayerController* MovementCharacterPC;
 	int SizeX;//Viewport X size
 	int SizeY;//Viewport Y size
 public:
+	//UPROPERTY()
 	class SwimmingState* swimmingState;
+	//UPROPERTY()
 	class ClimbingState* climbingState;
+	//UPROPERTY()
 	class ArmedState* armedState;
+	//UPROPERTY()
 	class NinjaState* currentNinjaState;
+	UPROPERTY()
 	class AMovementGameMode* GM;
 	float TraceDistance = 500.0f;
 	FVector2D ScreenMiddleCoordinates;
@@ -131,7 +136,9 @@ public:
 	FVector CrosshairProjectedWorldDirection;
 	FVector AimDirection;
 
+	//UPROPERTY()
 	class IPickupInterface* CurrentPickupItemInHand = nullptr;
+	UPROPERTY()
 	class UItem* CurrentInventoryItemInHand = nullptr;
 
 	/** Returns CameraBoom subobject **/
@@ -222,8 +229,9 @@ public:
 	
 	//used when pickup prompt shown and later swapped with Weapon if 
 	//player already has a Weapon after existing weapon dropped else just assigned to Weapon
+	UPROPERTY()
 	class AWeaponBase* PotentialWeapon;
-
+	UPROPERTY()
 	class AWeaponBase* Weapon;
 
 	UFUNCTION()

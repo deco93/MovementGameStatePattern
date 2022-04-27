@@ -42,7 +42,7 @@ bool UInventoryComponent::AddItem(UItem* Item)
 	if (Items.Num() >= Capacity || !Item)
 		return false;
 	Item->OwningInventory = this;
-	Item->World = GetWorld();
+	//Item->World = GetWorld();
 	Items.Add(Item);
 	OnInventoryUpdated.Broadcast();
 	return true;
@@ -53,7 +53,7 @@ bool UInventoryComponent::RemoveItem(UItem* Item)
 	if (Item && Items.Num()>0)
 	{
 		Item->OwningInventory = nullptr;
-		Item->World = nullptr;
+		//Item->World = nullptr;
 		Items.RemoveSingle(Item);
 		OnInventoryUpdated.Broadcast();
 		return true;

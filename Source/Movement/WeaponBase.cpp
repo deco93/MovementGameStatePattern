@@ -41,13 +41,13 @@ void AWeaponBase::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Ot
 	//UE_LOG(LogTemp, Warning, TEXT("You Overlapped with weapon"));
 	if (!WeaponPickedUp)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("You Overlapped with weapon"));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("You Overlapped with weapon"));
 		if (OtherActor)
 		{
 			AMovementCharacter* Char = Cast<AMovementCharacter>(OtherActor);
 			if (Char && WeaponInventoryItem)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Did overlap with Ninja Char"));
+				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Did overlap with Ninja Char"));
 				//Char->AddToInventory(WeaponInventoryItem);
 				Char->PotentialWeapon = this;
 				Char->TriggerPickup(GetActorLocation());
@@ -69,7 +69,7 @@ void AWeaponBase::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	if (!WeaponPickedUp && OtherActor)
 	{
 		AMovementCharacter* Char = Cast<AMovementCharacter>(OtherActor);
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("You no longer Overlap with weapon"));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("You no longer Overlap with weapon"));
 		if (Char)
 		{	
 			Char->PotentialWeapon = nullptr;

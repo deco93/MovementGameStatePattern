@@ -15,9 +15,16 @@ class MOVEMENT_API UBandageItem : public UItem
 	GENERATED_BODY()
 public :
 	UBandageItem();
+
+	UPROPERTY()
 	class AMovementCharacter* PlayerCharacter;
+
+	//UPROPERTY()
 	class IPickupInterface* MappedPickupItem;
+
+	//UFUNCTION()
 	void Use(class AMovementCharacter* Character) override;
+	//UFUNCTION()
 	void SetMappedItem(class IPickupInterface* MappedItem) override;
 
 };

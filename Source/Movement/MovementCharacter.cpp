@@ -471,7 +471,7 @@ void AMovementCharacter::UseItem(class UItem* Item)
 	if (Item)
 	{
 		Item->Use(this);
-		Item->OnUse(this);//this is bp implementation
+		//Item->OnUse(this);//this is bp implementation
 	}
 }
 

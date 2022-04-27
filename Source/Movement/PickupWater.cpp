@@ -112,16 +112,22 @@ void APickupWater::Equip()
 
 void APickupWater::UnEquip()
 {
-	if (PlayerCharacter && PlayerCharacter->CurrentPickupItemInHand)//means current item in hand is same as the bandage being tried to Use
+	/*if (PlayerCharacter && PlayerCharacter->CurrentPickupItemInHand)//means current item in hand is same as the bandage being tried to Use
 	{
 		PlayerCharacter->CurrentPickupItemInHand->GetStaticMeshComp()->DetachFromParent();
+	}*/
+		PlayerCharacter->CurrentPickupItemInHand->DetachFromCharacterSocket();
 		PlayerCharacter->CurrentPickupItemInHand = nullptr;
-	}
 }
 
 bool APickupWater::InHand()
 {
 	return false;
+}
+
+void APickupWater::DetachFromCharacterSocket()
+{
+	DetachRootComponentFromParent(false);
 }
 
 void APickupWater::OnConsume()

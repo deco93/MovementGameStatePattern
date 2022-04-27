@@ -15,10 +15,11 @@ public:
 	AMovementGameMode();
 	FHitResult DrawLineTrace(FVector Start, FVector End, FColor Color = FColor::Red, bool PersistentLine = false, float LifeTime = 0.5f);
 	FHitResult DrawLineTraceForFiring(FVector Start, FVector End, FColor Color = FColor::Red, bool PersistentLine = false, float LifeTime = 0.5f);
-	bool VisualizeDebug = true;
+	bool VisualizeDebug = false;
 	float DefaultTraceDistance = 2000.f;
 	FTimerHandle TIMER_HANDLE;
 	
+	UPROPERTY()
 	class AMovementCharacter* OurPlayerCharacter;
 	void SetPlayerCharacter(class AMovementCharacter* i_OurPlayerCharacter);
 };

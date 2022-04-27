@@ -30,10 +30,11 @@ void ArmedState::EquipWeaponToHand(AMovementCharacter* aMovementCharacter)
 	{
 		if (!WeaponInHand)
 		{
+			//if (aMovementCharacter->CurrentPickupItemInHand && aMovementCharacter->CurrentPickupItemInHand->GetStaticMeshComp())
 			if (aMovementCharacter->CurrentPickupItemInHand)
 			{
-				aMovementCharacter->CurrentPickupItemInHand->GetStaticMeshComp()->DetachFromParent();
-				aMovementCharacter->CurrentPickupItemInHand = nullptr;
+				aMovementCharacter->CurrentPickupItemInHand->DetachFromCharacterSocket();
+				//aMovementCharacter->CurrentPickupItemInHand = nullptr;
 			}
 			aMovementCharacter->Weapon->AttachToComponent(aMovementCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
 			WeaponInHand = true;
