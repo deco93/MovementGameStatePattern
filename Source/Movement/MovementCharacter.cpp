@@ -227,7 +227,8 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 		Blood += 1.0f * DeltaSeconds*0.5f;
 		Blood = FMath::Clamp(Blood, 0.0f, 100.0f);
 	}
-
+	//lerp aim
+	//LerpAim(DeltaSeconds);
 	OnSurvivalStatsUIUpdate.Broadcast(Cuts,Cuts>0, Water/100.0f, Food/100.0f, Blood/100.0f, Health/100.f);
 	if(Health<=0.0f)
 		OnDeathOfCharacter.Broadcast();
@@ -581,17 +582,13 @@ void AMovementCharacter::Aim()
 {
 	if (armedState && armedState->WeaponInHand && !armedState->IsAiming && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Walking)
 	{
+		//CurrentLerpDuration = 0.0f;
 		armedState->IsAiming = true;
 		GetCharacterMovement()->MaxWalkSpeed = 100.f;
 		TriggerAimStatus(armedState->IsAiming);//this is for notifying crosshair UI in level blueprint
+		CameraBoom->TargetArmLength = 200.0f;
+		CameraBoom->SocketOffset = FVector(0,85,75);
 		
-		/*GetCrosshairProjectedWorldLocation();
-		UE_LOG(LogTemp, Warning, TEXT("Current Crosshair world loc: (%f,%f,%f)"), CrosshairProjectedWorldLocation.X, CrosshairProjectedWorldLocation.Y, CrosshairProjectedWorldLocation.Z);
-		AimDirection = CrosshairProjectedWorldLocation - MovementCharacterPC->PlayerCameraManager->GetCameraLocation();
-		if (GM)
-		{
-			GM->DrawLineTrace(CrosshairProjectedWorldLocation, CrosshairProjectedWorldLocation+ AimDirection*1000.0f,FColor::Red, false, 10.0f);
-		}*/
 	}
 }
 
@@ -600,9 +597,12 @@ void AMovementCharacter::StopAim()
 	//if (armedState && armedState->WeaponInHand && armedState->IsAiming && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Walking)
 	if (armedState && armedState->WeaponInHand)
 	{
+		//CurrentLerpDuration = 0.0f;
 		armedState->IsAiming = false;
 		GetCharacterMovement()->MaxWalkSpeed = 600.f;
 		TriggerAimStatus(armedState->IsAiming);
+		CameraBoom->TargetArmLength = 300.0f;
+		CameraBoom->SocketOffset = FVector(0, 65, 55);
 	}
 	FRotator FollowCameraCurrentRotation = FollowCamera->GetForwardVector().Rotation();
 	FRotator CurrentPlayerRotation(0, FollowCameraCurrentRotation.Yaw, 0);
@@ -646,3 +646,29 @@ void AMovementCharacter::Use()
 		CurrentPickupItemInHand->Consume();
 	}
 }
+
+/*void AMovementCharacter::LerpAim(float DeltaSeconds)
+{
+	if (armedState && armedState->WeaponInHand && armedState->IsAiming && CurrentLerpDuration < 1.0f)
+	{
+		CameraBoom->TargetArmLength = FMath::Lerp(300.0f, 200.0f, CurrentLerpDuration / 1.0f);
+		CameraBoom->SocketOffset = FMath::Lerp(FVector(0, 65, 55), FVector(0, 85, 75), CurrentLerpDuration / 1.0f);
+		CurrentLerpDuration += DeltaSeconds;
+	}
+	else if (armedState && armedState->WeaponInHand && armedState->IsAiming && CurrentLerpDuration >= 1.0f)
+	{
+		CameraBoom->TargetArmLength = 200.0f;
+		CameraBoom->SocketOffset = FVector(0, 85, 75);
+	}
+	else if (armedState && armedState->WeaponInHand && !armedState->IsAiming && CurrentLerpDuration < 1.0f)
+	{
+		CameraBoom->TargetArmLength = FMath::Lerp(200.0f, 300.0f, CurrentLerpDuration / 1.0f);
+		CameraBoom->SocketOffset = FMath::Lerp(FVector(0, 85, 75), FVector(0, 65, 55), CurrentLerpDuration / 1.0f);
+		CurrentLerpDuration += DeltaSeconds;
+	}
+	else if (armedState && armedState->WeaponInHand && !armedState->IsAiming && CurrentLerpDuration >= 1.0f)
+	{
+		CameraBoom->TargetArmLength = 300.0f;
+		CameraBoom->SocketOffset = FVector(0, 65, 55);
+	}
+}*/

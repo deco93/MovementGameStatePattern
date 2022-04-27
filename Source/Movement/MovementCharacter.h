@@ -66,6 +66,8 @@ public:
 
 	void Use();
 
+	/*void LerpAim(float DeltaSeconds);
+	float CurrentLerpDuration = 0.0f;*/
 	UPROPERTY(BlueprintAssignable, Category = "Delegates")
 	FOnPickup OnPickup;
 
