@@ -93,6 +93,9 @@ AMovementCharacter::~AMovementCharacter()
 
 	if (climbingState)
 		delete climbingState;
+
+	if (armedState)
+		delete armedState;
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -51,7 +51,8 @@ void APickupItem::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Ot
 	AMovementCharacter* Player = Cast<AMovementCharacter>(OtherActor);
 	if (Player)
 	{
-		UBandageItem* UBItem = Cast<UBandageItem>(Player->BandageInventoryItem.GetDefaultObject());
+		//UBandageItem* UBItem = Cast<UBandageItem>(Player->BandageInventoryItem.GetDefaultObject());
+		UBandageItem* UBItem = NewObject<UBandageItem>(this, Player->BandageInventoryItem.Get(), FName("BandageInventoryItem"));
 		UBItem->SetMappedItem(this);
 		PickupSMComp->SetVisibility(false);
 		PickupBoxCollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);

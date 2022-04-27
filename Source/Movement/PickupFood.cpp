@@ -44,7 +44,8 @@ void APickupFood::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Ot
 	AMovementCharacter* Player = Cast<AMovementCharacter>(OtherActor);
 	if (Player)
 	{
-		UFoodItem* UBItem = Cast<UFoodItem>(Player->FoodInventoryItem.GetDefaultObject());
+		//UFoodItem* UBItem = Cast<UFoodItem>(Player->FoodInventoryItem.GetDefaultObject());
+		UFoodItem* UBItem = NewObject<UFoodItem>(this, Player->FoodInventoryItem.Get(), FName("FoodInventoryItem"));
 		UBItem->SetMappedItem(this);
 		PickupSMComp->SetVisibility(false);
 		PickupBoxCollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);

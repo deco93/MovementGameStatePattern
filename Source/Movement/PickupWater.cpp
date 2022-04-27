@@ -43,7 +43,8 @@ void APickupWater::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* O
 	AMovementCharacter* Player = Cast<AMovementCharacter>(OtherActor);
 	if (Player)
 	{
-		UWaterItem* UBItem = Cast<UWaterItem>(Player->WaterBottleInventoryItem.GetDefaultObject());
+		//UWaterItem* UBItem = Cast<UWaterItem>(Player->WaterBottleInventoryItem.GetDefaultObject());
+		UWaterItem* UBItem = NewObject<UWaterItem>(this, Player->WaterBottleInventoryItem.Get(), FName("WaterInventoryItem"));
 		UBItem->SetMappedItem(this);
 		PickupSMComp->SetVisibility(false);
 		PickupBoxCollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
