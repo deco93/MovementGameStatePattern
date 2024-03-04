@@ -1,0 +1,74 @@
+[
+		{
+			"LocationX": 7790,
+			"LocationY": -10670,
+			"LocationZ": 4800,
+			"Category": "Military|Civil|Toxic|Industrial",
+			"Tier": "Tier1|Tier2|Tier3|Tier4|Rare",
+			"ItemClass": "M4A1"
+		},
+		{
+			"locationX": 7790,
+			"locationY": -10670,
+			"locationZ": 4700,
+			"category": "Tier1",
+			"tier": "Industrial",
+			"itemClass": "Plank"
+		},
+		{
+			"locationX": 7890,
+			"locationY": -10850,
+			"locationZ": 4650,
+			"category": "Tier1",
+			"tier": "Industrial",
+			"itemClass": "Plank"
+		},
+		{
+			"locationX": 7590,
+			"locationY": -10940,
+			"locationZ": 4630,
+			"category": "Tier1",
+			"tier": "Industrial",
+			"itemClass": "Plank"
+		},
+		{
+			"locationX": 7590,
+			"locationY": -10670,
+			"locationZ": 4710,
+			"category": "Tier1",
+			"tier": "Industrial",
+			"itemClass": "Plank"
+		},
+		{
+			"locationX": 5810,
+			"locationY": -11620,
+			"locationZ": 4680,
+			"category": "Tier1",
+			"tier": "Industrial",
+			"itemClass": "Nails"
+		},
+		{
+			"locationX": 5810,
+			"locationY": -11880,
+			"locationZ": 4680,
+			"category": "Tier1",
+			"tier": "Industrial",
+			"itemClass": "Nails"
+		},
+		{
+			"locationX": 6020,
+			"locationY": -11810,
+			"locationZ": 4630,
+			"category": "Tier1",
+			"tier": "Industrial",
+			"itemClass": "Nails"
+		},
+		{
+			"locationX": 6020,
+			"locationY": -11620,
+			"locationZ": 4630,
+			"category": "Tier1",
+			"tier": "Industrial",
+			"itemClass": "Nails"
+		}
+	]

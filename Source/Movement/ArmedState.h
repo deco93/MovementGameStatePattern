@@ -18,9 +18,12 @@ public:
 
 	void EquipWeaponToHand(AMovementCharacter* aMovementCharacter);
 	UPROPERTY()
-	bool WeaponInHand = false;
+	bool WeaponInHand = false;//for managing animation states
 	UPROPERTY()
-	bool IsAiming = false;
+	bool IsAiming = false;//for managing animation states
 	UPROPERTY()
-	bool IsFiring = false;
+	bool IsFiring = false;//for managing animation states
+
+	UPROPERTY()
+	bool IsFireReady = false;//for managing when fire is actually possible after an initial delay to aim
 };

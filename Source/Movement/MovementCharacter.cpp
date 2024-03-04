@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "MovementCharacter.h"
-#include "HeadMountedDisplayFunctionLibrary.h"
+//#include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -19,9 +19,31 @@
 #include "Components/AudioComponent.h"
 #include "WeaponBase.h"
 #include "PickupInterface.h"
+//#include "Engine/TextRenderActor.h"
+#include "Components/TextRenderComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "Misc/Paths.h"
+#include "DrawDebugHelpers.h"
+#include "CommonUtils.h"
+#include <chrono>
+
 
 //////////////////////////////////////////////////////////////////////////
 // AMovementCharacter
+
+void AMovementCharacter::TimeToAimElapsed()
+{
+	UE_LOG(LogTemp, Warning, TEXT("called %s"), ANSI_TO_TCHAR(__FUNCTION__));
+	if (armedState)
+	{
+		armedState->IsFireReady = true;
+		FName GunMuzzleName = FName(FString("b_gun_muzzleflash"));
+		FVector MuzzleLocation = Weapon->WeaponSkeletalMeshComp->GetBoneLocation(GunMuzzleName);
+		DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleLocation + (GetActorUpVector() * 500.0f), FColor::Cyan, false, 10.0f);
+	}
+}
 
 AMovementCharacter::AMovementCharacter()
 {
@@ -57,13 +79,27 @@ AMovementCharacter::AMovementCharacter()
 	Inventory = CreateDefaultSubobject<UInventoryComponent>(TEXT("CharacterInventory"));
 	Inventory->Capacity = 20;
 
+
+	FlashLight = CreateDefaultSubobject<USpotLightComponent>(TEXT("FlashLight"));
+	FlashLight->SetupAttachment(GetMesh());
+	FlashLight->SetVisibility(false);
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AMovementCharacter::OnBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &AMovementCharacter::OnEndOverlap);
 
 	PlayerAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("PlayerAudioComponent"));
-	RootComponent->SetupAttachment(PlayerAudioComponent);
+	PlayerAudioComponent->SetupAttachment(RootComponent);
+
+	CharacterNameComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("CharacterNameComponent"));
+	/*FAttachmentTransformRules DefaultRules= FAttachmentTransformRules::FAttachmentTransformRules(EAttachmentRule::SnapToTarget, false);
+	CharacterName->AttachToComponent(RootComponent, DefaultRules);*/
+	if (CharacterNameComponent)
+	{	
+		CharacterNameComponent->SetText(FText::FromString("TestName"));
+		CharacterNameComponent->SetupAttachment(RootComponent);
+	}
 
 	static ConstructorHelpers::FObjectFinder<USoundCue> M4SoundCueClass(TEXT("SoundCue'/Game/Sounds/guns/M4_gun_shot_loop_Cue.M4_gun_shot_loop_Cue'"));
 	if (M4SoundCueClass.Succeeded())
@@ -96,6 +132,7 @@ AMovementCharacter::~AMovementCharacter()
 
 	if (armedState)
 		delete armedState;
+	
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -105,21 +142,7 @@ void AMovementCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 {
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMovementCharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	PlayerInputComponent->BindAction("Pickup", IE_Released, this, &AMovementCharacter::Pickup);
-	PlayerInputComponent->BindAction("Aim", IE_Pressed, this, &AMovementCharacter::Aim);
-	PlayerInputComponent->BindAction("Aim", IE_Released, this, &AMovementCharacter::StopAim);
 
-	PlayerInputComponent->BindAction("Use", IE_Released, this, &AMovementCharacter::Use);
-
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMovementCharacter::Fire);
-	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AMovementCharacter::StopFire);
-
-	PlayerInputComponent->BindAxis("MoveForward", this, &AMovementCharacter::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &AMovementCharacter::MoveRight);
-
-	PlayerInputComponent->BindAxis("MoveUp", this, &AMovementCharacter::MoveUp);
 
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
@@ -129,7 +152,29 @@ void AMovementCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AMovementCharacter::LookUpAtRate);
 
-	
+	//Enhanced Input handling
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if(UEnhancedInputLocalPlayerSubsystem* InputSystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+	{
+		InputSystem->ClearAllMappings();
+		InputSystem->AddMappingContext(InputMappingContext, 0);
+	}
+	UEnhancedInputComponent* Input = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+	Input->BindAction(InputToJump, ETriggerEvent::Triggered, this, &AMovementCharacter::EnhancedInputJump);
+
+	Input->BindAction(InputToToggleFlashLight, ETriggerEvent::Triggered, this, &AMovementCharacter::ToggleFlashLight);
+	Input->BindAction(InputToPickup, ETriggerEvent::Triggered, this, &AMovementCharacter::Pickup);
+	Input->BindAction(InputToUse, ETriggerEvent::Triggered, this, &AMovementCharacter::Use);
+
+	Input->BindAction(InputToAim, ETriggerEvent::Triggered, this, &AMovementCharacter::Aim);
+	Input->BindAction(InputToAim, ETriggerEvent::Completed, this, &AMovementCharacter::StopAim);
+
+	Input->BindAction(InputToFire, ETriggerEvent::Triggered, this, &AMovementCharacter::Fire);
+	Input->BindAction(InputToFire, ETriggerEvent::Completed, this, &AMovementCharacter::StopFire);
+
+	Input->BindAction(InputToMoveForward, ETriggerEvent::Triggered, this, &AMovementCharacter::EnhancedInputMoveForward);
+	Input->BindAction(InputToMoveRight, ETriggerEvent::Triggered, this, &AMovementCharacter::EnhancedInputMoveRight);
+	Input->BindAction(InputToSwimUp, ETriggerEvent::Triggered, this, &AMovementCharacter::EnhancedInputSwimUp);
 }
 
 
@@ -184,19 +229,34 @@ void AMovementCharacter::BeginPlay()
 			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
 		}
 	}*/
-	
+	bool IsReadSuccess = false;
+	FString ReadOutputMessage;
+	FString ReadString = CommonUtils::ReadFile(FPaths::ProjectConfigDir() + "/DefaultSpawns.json", IsReadSuccess, ReadOutputMessage);
+
+	if (IsReadSuccess)
+	{
+		GEngine->AddOnScreenDebugMessage(-1,20.0f, FColor::Blue, FString::Printf(TEXT("file read success contents: %s"), *ReadString));
+		TArray<TSharedPtr<FJsonValue>> ReadJsonArr;
+		if (FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(ReadString), ReadJsonArr))
+		{
+			if (ReadJsonArr[0].IsValid())
+			{
+				FString CharacterName;
+				if (const TSharedPtr<FJsonObject> ReadObj = ReadJsonArr[0]->AsObject())
+				{
+					if (ReadObj->TryGetStringField("ItemClass", CharacterName))
+					{
+						if (CharacterNameComponent)
+							CharacterNameComponent->SetText(FText::FromString(CharacterName));
+					}
+				}
+			}
+		}
+	}
+	else
+		GEngine->AddOnScreenDebugMessage(-1,20.0f, FColor::Blue, FString::Printf(TEXT("file read failed")));
 }
 
-void AMovementCharacter::Jump()
-{
-	if (!GetCharacterMovement()->IsFalling())
-	{
-		UGameplayStatics::PlaySound2D(GetWorld(),JumpSound);
-		if (armedState)
-			StopAim();
-	}
-	ACharacter::Jump();
-}
 
 void AMovementCharacter::Tick(float DeltaSeconds)
 {
@@ -261,7 +321,7 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 			FVector StartLoc = GetActorLocation() + GetActorForwardVector() * 35.0f;
 			FHitResult OHit =GM->DrawLineTrace(GetActorLocation()+GetActorForwardVector()*35.0f, StartLoc + (GetActorForwardVector()* TraceDistance));
 			FHitResult OHit2;
-			if (OHit.bBlockingHit && OHit.Actor->ActorHasTag("Ledge"))
+			if (OHit.bBlockingHit && OHit.GetActor()->ActorHasTag("Ledge"))
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Hit success on ledge"));
 				FVector SecondTraceDest = OHit.ImpactPoint + GetActorForwardVector() * 10.0f;
@@ -326,7 +386,7 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 			FHitResult HResult = GM->DrawLineTraceForFiring(CrosshairProjectedWorldLocation, CrosshairProjectedWorldLocation + AimDirection * 1000.0f, FColor::Red, false, 10.0f);
 			if (HResult.bBlockingHit)
 			{
-				AZombieNPC* Zombie = Cast<AZombieNPC>(HResult.Actor);
+				AZombieNPC* Zombie = Cast<AZombieNPC>(HResult.GetActor());
 				if (Zombie)
 				{
 					//Zombie->TakeDamage(50.0f);
@@ -350,75 +410,6 @@ void AMovementCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
-void AMovementCharacter::MoveForward(float Value)
-{
-	if (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying)
-		UE_LOG(LogTemp, Warning, TEXT("Value in move forward %f"), Value);
-
-	if ((Controller != nullptr) && (Value != 0.0f) && (GetCharacterMovement()->MovementMode != EMovementMode::MOVE_Flying))
-	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get forward vector
-		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		AddMovementInput(Direction, Value);
-	}
-	else if ((Controller != nullptr) && (Value != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying) && !climbingState->ClimbUp)
-	{
-	//else if ((Controller != nullptr) && (Value != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying) && !ClimbUp)
-		climbingState->ClimbUp = true;
-		if (currentNinjaState)
-			currentNinjaState->HandleInput(this, InputTypeDirection::FORWARD_ITD, Value);
-		//ClimbUp = true;
-		GetWorld()->GetTimerManager().SetTimer(GM->TIMER_HANDLE,this, &AMovementCharacter::OnClimbComplete, 2.0f,false);
-	}
-}
-
-void AMovementCharacter::MoveRight(float Value)
-{
-	EMovementMode CharacterMovementMode = GetCharacterMovement()->MovementMode;
-	if ( (Controller != nullptr) && (Value != 0.0f) )
-	{
-		// find out which way is right
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get right vector 
-		FVector Direction;
-		if (GM && CharacterMovementMode == EMovementMode::MOVE_Flying)
-		{
-			//check if movable right or left on ledge if movement mode flying
-			if (currentNinjaState)
-			{
-				currentNinjaState->HandleInput(this,InputTypeDirection::RIGHT_ITD,Value);
-			}
-			
-		}
-		if (CharacterMovementMode != EMovementMode::MOVE_Flying)
-		{
-			Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-			AddMovementInput(Direction, Value);
-		}
-		
-	}
-	else if ((CharacterMovementMode == EMovementMode::MOVE_Flying) && (Controller != nullptr) && (Value == 0.0f))
-	{
-		climbingState->LedgeHorizontalSpeed = 0.0f;
-	}
-}
-
-void AMovementCharacter::MoveUp(float Value)
-{
-	
-	if ((Controller != nullptr) && (Value != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Swimming)) 
-	{
-		if(currentNinjaState)
-			currentNinjaState->HandleInput(this, InputTypeDirection::UP_ITD, Value);
-	}
-	
-}
 
 void AMovementCharacter::OnClimbComplete()
 {
@@ -533,6 +524,100 @@ void AMovementCharacter::OnTakingDamage()
 	}
 }
 
+void AMovementCharacter::EnhancedInputJump()
+{	
+	if (!GetCharacterMovement()->IsFalling())
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), JumpSound);
+		if (armedState)
+			StopAim();
+	}
+	ACharacter::Jump();
+}
+
+void AMovementCharacter::EnhancedInputMoveForward(const FInputActionValue& Value)
+{
+	float ValueForward = Value.Get<float>();
+	if (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying)
+		UE_LOG(LogTemp, Warning, TEXT("Value in move forward %f"), ValueForward);
+
+	if ((Controller != nullptr) && (ValueForward != 0.0f) && (GetCharacterMovement()->MovementMode != EMovementMode::MOVE_Flying))
+	{
+		// find out which way is forward
+		const FRotator Rotation = Controller->GetControlRotation();
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+		// get forward vector
+		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		AddMovementInput(Direction, ValueForward);
+	}
+	else if ((Controller != nullptr) && (ValueForward != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying) && !climbingState->ClimbUp)
+	{
+		//else if ((Controller != nullptr) && (Value != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying) && !ClimbUp)
+		climbingState->ClimbUp = true;
+		if (currentNinjaState)
+			currentNinjaState->HandleInput(this, InputTypeDirection::FORWARD_ITD, ValueForward);
+		//ClimbUp = true;
+		GetWorld()->GetTimerManager().SetTimer(GM->TIMER_HANDLE, this, &AMovementCharacter::OnClimbComplete, 2.0f, false);
+	}
+}
+
+void AMovementCharacter::EnhancedInputMoveRight(const FInputActionValue& Value)
+{
+	float ValueRight = Value.Get<float>();
+	EMovementMode CharacterMovementMode = GetCharacterMovement()->MovementMode;
+	if ((Controller != nullptr) && (ValueRight != 0.0f))
+	{
+		// find out which way is right
+		const FRotator Rotation = Controller->GetControlRotation();
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+		// get right vector 
+		FVector Direction;
+		if (GM && CharacterMovementMode == EMovementMode::MOVE_Flying)
+		{
+			//check if movable right or left on ledge if movement mode flying
+			if (currentNinjaState)
+			{
+				currentNinjaState->HandleInput(this, InputTypeDirection::RIGHT_ITD, ValueRight);
+			}
+
+		}
+		if (CharacterMovementMode != EMovementMode::MOVE_Flying)
+		{
+			Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+			AddMovementInput(Direction, ValueRight);
+		}
+
+	}
+	else if ((CharacterMovementMode == EMovementMode::MOVE_Flying) && (Controller != nullptr) && (ValueRight == 0.0f))
+	{
+		climbingState->LedgeHorizontalSpeed = 0.0f;
+	}
+}
+
+void AMovementCharacter::EnhancedInputSwimUp(const FInputActionValue& Value)
+{
+	float SwimUpValue = Value.Get<float>();
+	if ((Controller != nullptr) && (SwimUpValue != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Swimming))
+	{
+		if (currentNinjaState)
+			currentNinjaState->HandleInput(this, InputTypeDirection::UP_ITD, SwimUpValue);
+	}
+
+}
+
+void AMovementCharacter::ToggleFlashLight()
+{	
+	if (FlashLight)
+	{
+		if (FlashLight->IsVisible())
+			FlashLight->SetVisibility(false);
+		else
+			FlashLight->SetVisibility(true);
+	}
+}
+
 FVector AMovementCharacter::GetCrosshairProjectedWorldLocation()
 {
 	if (MovementCharacterPC)
@@ -572,6 +657,12 @@ void AMovementCharacter::Pickup()
 			Weapon = PotentialWeapon;
 			PotentialWeapon = nullptr;
 		}
+
+		if (Weapon)
+		{
+			SecondsBetweenBullet = 1 / (Weapon->WeaponFireRate / 60.0f);
+			UE_LOG(LogTemp, Warning, TEXT("SecondsBetweenBullet: %f"), SecondsBetweenBullet);
+		}
 		/*Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
 		Weapon->WeaponPickedUp = true;
 		TriggerPickup(Weapon->GetActorLocation());*/
@@ -588,7 +679,19 @@ void AMovementCharacter::Aim()
 		TriggerAimStatus(armedState->IsAiming);//this is for notifying crosshair UI in level blueprint
 		CameraBoom->TargetArmLength = 200.0f;
 		CameraBoom->SocketOffset = FVector(0,85,75);
-		
+		/*if (Weapon)
+		{
+			//GM->DrawLineTrace(Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))) + (GetActorUpVector() * 500.0f), FColor::Cyan, false, 10.0f);
+			//DrawDebugLine(GetWorld(), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))) + (GetActorUpVector() * 500.0f),FColor::Cyan, false, 10.0f);
+			FName GunMuzzleName = FName(FString("b_gun_muzzleflash"));
+			FVector MuzzleLocation = Weapon->WeaponSkeletalMeshComp->GetBoneLocation(GunMuzzleName);
+			DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleLocation + (GetActorUpVector() * 500.0f),FColor::Cyan, false, 10.0f);
+			Weapon->SpawnProjectile(MuzzleLocation + (GetActorForwardVector()*500.0f), GetActorRotation());
+		}*/
+		if (Weapon)
+		{
+			GetWorldTimerManager().SetTimer(TIMER_HANDLE_TIME_TO_AIM, this, &AMovementCharacter::TimeToAimElapsed, 1.0f, false, Weapon->TimeToAim);
+		}
 	}
 }
 
@@ -599,6 +702,8 @@ void AMovementCharacter::StopAim()
 	{
 		//CurrentLerpDuration = 0.0f;
 		armedState->IsAiming = false;
+		armedState->IsFireReady = false;
+		GetWorldTimerManager().ClearTimer(TIMER_HANDLE_TIME_TO_AIM);
 		GetCharacterMovement()->MaxWalkSpeed = 600.f;
 		TriggerAimStatus(armedState->IsAiming);
 		CameraBoom->TargetArmLength = 300.0f;
@@ -611,19 +716,48 @@ void AMovementCharacter::StopAim()
 
 void AMovementCharacter::Fire()
 {
-	if (armedState && armedState->WeaponInHand && armedState->IsAiming)
+	if (armedState && armedState->WeaponInHand && armedState->IsAiming && armedState->IsFireReady)
 	{
-		armedState->IsFiring = true;
-		//TODO take decision of whether M4 being fired or As-Val? whichever weapon is being fired
-		if (Weapon->WeaponInventoryItem->ItemDisplayName.ToString().Compare("M4-A1") == 0)//As-Val M4-A1
-		{	
-			PlayerAudioComponent->SetSound(M4Sound);
-		}
-		else if (Weapon->WeaponInventoryItem->ItemDisplayName.ToString().Compare("As-Val") == 0)
+		if (Weapon)
 		{
-			PlayerAudioComponent->SetSound(ASValSound);
+			if (LastFireTimestampMillis != 0.0f)
+			{
+				double TempCurrentMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
+					.count();
+				UE_LOG(LogTemp, Warning, TEXT("<<<< computed diff %lf"), ((TempCurrentMillis - LastFireTimestampMillis) / 1000.0f));
+				if ( ((TempCurrentMillis - LastFireTimestampMillis)/1000.0f) >= SecondsBetweenBullet)
+				{
+					LastFireTimestampMillis = TempCurrentMillis;
+				}
+				else
+				{
+					armedState->IsFiring = false;
+					return;
+				}
+			}
+			else
+			{
+				LastFireTimestampMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
+					.count();
+			}
+			armedState->IsFiring = true;
+			UE_LOG(LogTemp, Warning, TEXT("called %s"), ANSI_TO_TCHAR(__FUNCTION__));
+			//TODO take decision of whether M4 being fired or As-Val? whichever weapon is being fired
+			if (Weapon->WeaponInventoryItem->ItemDisplayName.ToString().Compare("M4-A1") == 0)//As-Val M4-A1
+			{
+				PlayerAudioComponent->SetSound(M4Sound);
+			}
+			else if (Weapon->WeaponInventoryItem->ItemDisplayName.ToString().Compare("As-Val") == 0)
+			{
+				PlayerAudioComponent->SetSound(ASValSound);
+			}
+
+			//GM->DrawLineTrace(Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))) + (GetActorUpVector() * 500.0f), FColor::Cyan, false, 10.0f);
+			//DrawDebugLine(GetWorld(), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))) + (GetActorUpVector() * 500.0f),FColor::Cyan, false, 10.0f);
+			SpawnProjectile();
+
+			//PlayerAudioComponent->Play();
 		}
-		//PlayerAudioComponent->Play();
 	}
 }
 
@@ -632,6 +766,7 @@ void AMovementCharacter::StopFire()
 	if (armedState)
 	{
 		armedState->IsFiring = false;
+		GetWorldTimerManager().ClearTimer(TIMER_FIRE_RATE);
 		if (PlayerAudioComponent->IsPlaying())
 		{
 			PlayerAudioComponent->Stop();
@@ -644,6 +779,17 @@ void AMovementCharacter::Use()
 	if (armedState && !armedState->WeaponInHand && CurrentPickupItemInHand)
 	{
 		CurrentPickupItemInHand->Consume();
+	}
+}
+
+void AMovementCharacter::SpawnProjectile()
+{
+	UE_LOG(LogTemp, Warning, TEXT("called %s"), ANSI_TO_TCHAR(__FUNCTION__));
+	if (Weapon)
+	{
+		FName GunMuzzleName = FName(FString("b_gun_muzzleflash"));
+		FVector MuzzleLocation = Weapon->WeaponSkeletalMeshComp->GetBoneLocation(GunMuzzleName);
+		Weapon->SpawnProjectile(MuzzleLocation + (GetActorForwardVector() * 10.0f), GetActorForwardVector().Rotation());
 	}
 }
 

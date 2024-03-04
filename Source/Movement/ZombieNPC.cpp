@@ -18,7 +18,6 @@ AZombieNPC::AZombieNPC()
 	PrimaryActorTick.bCanEverTick = true;
 	//this->bUseControllerRotationYaw = true;
 	ZombieAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("ZombieAudioComponent"));
-	RootComponent->SetupAttachment(ZombieAudioComponent);
 
 	/*static ConstructorHelpers::FObjectFinder<APickupWater> PickupWaterBP(TEXT("Blueprint'/Game/ThirdPersonCPP/Blueprints/Spawnables/BP_WaterBottlePickup.BP_WaterBottlePickup'"));
 	if (PickupWaterBP.Succeeded())
@@ -26,6 +25,21 @@ AZombieNPC::AZombieNPC()
 		PickupWater = PickupWaterBP.Object;
 	}*/
 	//setup_stimulus();
+	if (ZombieAudioComponent)
+	{
+		ZombieAudioComponent->bOverrideAttenuation = 1;
+		ZombieAudioComponent->bAllowSpatialization = 1;
+		ZombieAudioComponent->AttenuationOverrides.AttenuationShape = EAttenuationShape::Type::Sphere;
+		ZombieAudioComponent->AttenuationOverrides.DistanceAlgorithm = EAttenuationDistanceModel::Linear;
+		ZombieAudioComponent->AttenuationOverrides.ConeSphereRadius = 400.0f;
+		ZombieAudioComponent->AttenuationOverrides.FalloffDistance = 800.0f;
+		/*PatrolSound->bOverrideAttenuation = 1;
+		PatrolSound->AttenuationOverrides.AttenuationShape = EAttenuationShape::Type::Sphere;
+		PatrolSound->AttenuationOverrides.DistanceAlgorithm = EAttenuationDistanceModel::Linear;
+		PatrolSound->AttenuationOverrides.ConeSphereRadius = 400.0f;
+		PatrolSound->AttenuationOverrides.FalloffDistance = 800.0f;*/
+	}
+	ZombieAudioComponent->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -34,10 +48,11 @@ void AZombieNPC::BeginPlay()
 	Super::BeginPlay();
 	GetCharacterMovement()->MaxWalkSpeed = 100.f;
 	GM = Cast<AMovementGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (ZombieAudioComponent && PatrolSound)
-	{
+	/*if (ZombieAudioComponent && PatrolSound)
+	{	
 		ZombieAudioComponent->SetSound(PatrolSound);
-	}
+		ZombieAudioComponent->sound
+	}*/
 }
 
 // Called every frame

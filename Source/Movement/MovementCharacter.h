@@ -8,6 +8,7 @@
 //#include "NinjaState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundCue.h"
+#include "InputAction.h"
 #include "MovementCharacter.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPickup, FVector, Location);
@@ -30,6 +31,14 @@ class AMovementCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))	
+	class USpotLightComponent* FlashLight;
+
+	FTimerHandle TIMER_HANDLE_TIME_TO_AIM;
+	FTimerHandle TIMER_FIRE_RATE;
+	float SecondsBetweenBullet;
+	void TimeToAimElapsed();
+	void SpawnProjectile();
 public:
 	AMovementCharacter();
 	~AMovementCharacter();
@@ -44,6 +53,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
 
+	double LastFireTimestampMillis = 0.0f;
+
 	UFUNCTION()
 	void OnBeginOverlap( UPrimitiveComponent* OverlappedComponent,AActor* OtherActor,UPrimitiveComponent* OtherComp,int32 OtherBodyIndex,  bool bFromSweep, const FHitResult& SweepResult);
 
@@ -51,8 +62,6 @@ public:
 	void OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void BeginPlay() override;
-
-	void Jump();
 
 	void Pickup();
 
@@ -65,6 +74,8 @@ public:
 	void StopFire();
 
 	void Use();
+
+	
 
 	/*void LerpAim(float DeltaSeconds);
 	float CurrentLerpDuration = 0.0f;*/
@@ -82,16 +93,6 @@ public:
 
 protected:
 
-	
-
-	/** Called for forwards/backward input */
-	void MoveForward(float Value);
-
-	/** Called for side to side input */
-	void MoveRight(float Value);
-
-	/** Called for up/down input only for ledge climbing or rope climbing*/
-	void MoveUp(float Value);
 
 	/** 
 	 * Called via input to turn at a given rate. 
@@ -192,6 +193,9 @@ public:
 	class UAudioComponent* PlayerAudioComponent;
 
 	UPROPERTY(EditAnywhere)
+	class UTextRenderComponent* CharacterNameComponent;
+
+	UPROPERTY(EditAnywhere)
 	class UAnimMontage* BandageAnimation;
 
 	UPROPERTY(EditAnywhere)
@@ -249,6 +253,14 @@ public:
 	UFUNCTION()
 	void OnTakingDamage();
 
+	void EnhancedInputJump();
+
+	void EnhancedInputMoveForward(const FInputActionValue& Value);
+	void EnhancedInputMoveRight(const FInputActionValue& Value);
+	void EnhancedInputSwimUp(const FInputActionValue& Value);
+
+	void ToggleFlashLight();
+
 	FVector GetCrosshairProjectedWorldLocation();
 
 	UPROPERTY(EditAnywhere)
@@ -264,5 +276,36 @@ public:
 	FTimerHandle CHARACTER_TIMER_HANDLE;
 	/*bool WeaponInHand = false;
 	void EquipWeaponToHand();*/
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Enhanced Input")
+	UInputMappingContext* InputMappingContext;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Input")
+	UInputAction* InputToJump;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Input")
+	UInputAction* InputToToggleFlashLight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Input")
+	UInputAction* InputToPickup;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Input")
+	UInputAction* InputToUse;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Input")
+	UInputAction* InputToAim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Input")
+	UInputAction* InputToFire;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Input")
+	UInputAction* InputToMoveForward;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Input")
+	UInputAction* InputToMoveRight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Input")
+	UInputAction* InputToSwimUp;
+
 };
 

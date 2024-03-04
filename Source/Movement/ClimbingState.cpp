@@ -31,7 +31,7 @@ void ClimbingState::HandleInput(AMovementCharacter* aMovementCharacter, InputTyp
 		StartLocation.Z = StartLocation.Z + (aMovementCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() - 15.0f);//raise the startlocation to about ledge hand location Z
 		FVector EndLocation = StartLocation + aMovementCharacter->GetActorForwardVector() * aMovementCharacter->TraceDistance;
 		FHitResult OHit = aMovementCharacter->GM->DrawLineTrace(StartLocation, EndLocation);
-		if (OHit.bBlockingHit && !OHit.Actor->ActorHasTag("Ledge"))
+		if (OHit.bBlockingHit && !OHit.GetActor()->ActorHasTag("Ledge"))
 			axisValue = 0.0f;
 		else if (!OHit.bBlockingHit)
 			axisValue = 0.0f;

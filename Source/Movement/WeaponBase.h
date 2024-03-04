@@ -29,6 +29,17 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	class UGunItem* WeaponInventoryItem;
+	/*UPROPERTY(EditAnywhere)
+	TSubclassOf<class UGunItem> WeaponInventoryItem;*/
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class AProjectile> ProjectileToSpawn;
+
+	UPROPERTY(EditAnywhere)
+	float TimeToAim = 0.0f;
+
+	UPROPERTY(EditAnywhere)
+	int WeaponFireRate = 900;//projectiles per minute
 
 	int Durability = 30;
 	
@@ -43,6 +54,8 @@ public:
 	void OnOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UGunItem* GetWeaponInventoryItem();
+
+	void SpawnProjectile(FVector Location, FRotator Rotation);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

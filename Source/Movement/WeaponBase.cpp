@@ -6,6 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/WidgetComponent.h"
 #include "MovementCharacter.h"
+#include "Projectile.h"
 
 
 
@@ -14,11 +15,14 @@ AWeaponBase::AWeaponBase()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	//PrimaryActorTick.bCanEverTick = true;
-	WeaponSkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>("WeaponSkeletalMeshComp");
-	
 	RootComponent = WeaponSkeletalMeshComp;
+	WeaponSkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>("WeaponSkeletalMeshComp");
+	//WeaponSkeletalMeshComp->SetupAttachment(RootComponent);
+
 	WeaponBoxCollisionComponent = CreateDefaultSubobject<UBoxComponent>("WeaponBoxCollisionComponent");
-	WeaponBoxCollisionComponent->SetRelativeLocation(FVector(0, 0, 0));
+	//WeaponBoxCollisionComponent->SetupAttachment(WeaponSkeletalMeshComp);
+	//WeaponBoxCollisionComponent->SetRelativeLocation(FVector(0, 0, 0));
+
 	//WeaponWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("WeaponWidgetComponent");
 }
 
@@ -85,6 +89,18 @@ UGunItem* AWeaponBase::GetWeaponInventoryItem()
 	if (WeaponInventoryItem)
 		Item = WeaponInventoryItem;
 	return Item;
+}
+
+void AWeaponBase::SpawnProjectile(FVector Location, FRotator Rotation)
+{
+	UWorld* CurrentWorld = GetWorld();
+	if (CurrentWorld)
+	{
+		if (ProjectileToSpawn)
+		{
+			CurrentWorld->SpawnActor<AProjectile>(ProjectileToSpawn, Location, Rotation);
+		}
+	}
 }
 
 
