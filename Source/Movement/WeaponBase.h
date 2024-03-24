@@ -11,7 +11,8 @@ UCLASS()
 class MOVEMENT_API AWeaponBase : public AActor
 {
 	GENERATED_BODY()
-	
+	UFUNCTION(Server, Reliable)
+	void Server_SetClearPotentialWeapon(class AMovementCharacter* Character, int SetOrClearFlag);// 0 is set to current Weapon 1 is clear and set to nullptr
 public:	
 	// Sets default values for this actor's properties
 	AWeaponBase();
@@ -55,11 +56,9 @@ public:
 
 	UGunItem* GetWeaponInventoryItem();
 
-	void SpawnProjectile(FVector Location, FRotator Rotation);
+	/*UFUNCTION(Server, Reliable)
+	void Server_SpawnProjectile(FVector Location, FRotator Rotation);*/
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-
-
 };

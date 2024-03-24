@@ -59,8 +59,7 @@ void AZombieNPC::BeginPlay()
 void AZombieNPC::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	const FVector MainCharLocation = GM->OurPlayerCharacter->GetActorLocation();
-	const FVector ZombieLocation = GetActorLocation(); 
+	
 	if (Health <= 0.0f && IsDead == false)
 	{
 		IsDead = true;

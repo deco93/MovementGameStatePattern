@@ -10,20 +10,27 @@
 
 
 
+void AWeaponBase::Server_SetClearPotentialWeapon_Implementation(AMovementCharacter* Character, int SetOrClearFlag)
+{
+	if (Character)
+	{
+		if (SetOrClearFlag == 0)
+			Character->PotentialWeapon = this;
+		else if (SetOrClearFlag == 1)
+			Character->PotentialWeapon = nullptr;
+	}
+}
+
 // Sets default values
 AWeaponBase::AWeaponBase()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	//PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	SetReplicatingMovement(true);
 	RootComponent = WeaponSkeletalMeshComp;
 	WeaponSkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>("WeaponSkeletalMeshComp");
-	//WeaponSkeletalMeshComp->SetupAttachment(RootComponent);
-
 	WeaponBoxCollisionComponent = CreateDefaultSubobject<UBoxComponent>("WeaponBoxCollisionComponent");
-	//WeaponBoxCollisionComponent->SetupAttachment(WeaponSkeletalMeshComp);
-	//WeaponBoxCollisionComponent->SetRelativeLocation(FVector(0, 0, 0));
-
-	//WeaponWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("WeaponWidgetComponent");
 }
 
 // Called when the game starts or when spawned
@@ -36,32 +43,23 @@ void AWeaponBase::BeginPlay()
 
 void AWeaponBase::Fire()
 {
-	//WeaponSkeletalMeshComp->PlayAnimation(WeaponFireAnimationAsset, false);
 	UE_LOG(LogTemp, Warning, TEXT("inside WeaponBase Fire"));
 }
 
 void AWeaponBase::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	//UE_LOG(LogTemp, Warning, TEXT("You Overlapped with weapon"));
+	
 	if (!WeaponPickedUp)
 	{
-		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("You Overlapped with weapon"));
+		
 		if (OtherActor)
 		{
 			AMovementCharacter* Char = Cast<AMovementCharacter>(OtherActor);
 			if (Char && WeaponInventoryItem)
-			{
-				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Did overlap with Ninja Char"));
-				//Char->AddToInventory(WeaponInventoryItem);
-				Char->PotentialWeapon = this;
+			{	
+				//Char->PotentialWeapon = this;
+				Server_SetClearPotentialWeapon(Char, 0);
 				Char->TriggerPickup(GetActorLocation());
-				/*Char->Weapon = this;
-				Char->TriggerPickup(GetActorLocation());*/
-				
-				
-				
-				/*Char->Weapon->AttachToComponent(Char->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
-				WeaponPickedUp = true;*/
 			}
 		}
 	}
@@ -73,11 +71,12 @@ void AWeaponBase::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Othe
 	if (!WeaponPickedUp && OtherActor)
 	{
 		AMovementCharacter* Char = Cast<AMovementCharacter>(OtherActor);
-		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("You no longer Overlap with weapon"));
+		
 		if (Char)
 		{	
-			Char->PotentialWeapon = nullptr;
+			//Char->PotentialWeapon = nullptr;
 			//Char->Weapon = nullptr;
+			Server_SetClearPotentialWeapon(Char, 1);
 			Char->TriggerPickup(GetActorLocation());
 		}
 	}
@@ -91,17 +90,20 @@ UGunItem* AWeaponBase::GetWeaponInventoryItem()
 	return Item;
 }
 
-void AWeaponBase::SpawnProjectile(FVector Location, FRotator Rotation)
-{
-	UWorld* CurrentWorld = GetWorld();
-	if (CurrentWorld)
-	{
-		if (ProjectileToSpawn)
-		{
-			CurrentWorld->SpawnActor<AProjectile>(ProjectileToSpawn, Location, Rotation);
-		}
-	}
-}
+//void AWeaponBase::Server_SpawnProjectile_Implementation(FVector Location, FRotator Rotation)
+//{
+//	UWorld* CurrentWorld = GetWorld();
+//	UE_LOG(LogTemp, Error, TEXT("inside %s"), ANSI_TO_TCHAR(__FUNCTION__));
+//	if (CurrentWorld)
+//	{
+//		UE_LOG(LogTemp, Error, TEXT("CurrentWorld not null"));
+//		if (ProjectileToSpawn)
+//		{
+//			UE_LOG(LogTemp, Error, TEXT("SpawnActor called for projectile"));
+//			CurrentWorld->SpawnActor<AProjectile>(ProjectileToSpawn, Location, Rotation);
+//		}
+//	}
+//}
 
 
 

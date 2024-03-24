@@ -9,9 +9,12 @@
 AProjectile::AProjectile()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
+	SetReplicatingMovement(true);
 	ProjectileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProjectileMesh"));
-	ProjectileMesh->SetupAttachment(RootComponent);
+	//ProjectileMesh->SetupAttachment(RootComponent);
+	RootComponent = ProjectileMesh;
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
 	ProjectileMovementComponent->InitialSpeed = 3000.0f;
 	ProjectileMovementComponent->MaxSpeed = 8000.0f;
@@ -25,9 +28,9 @@ void AProjectile::BeginPlay()
 }
 
 // Called every frame
-void AProjectile::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
+//void AProjectile::Tick(float DeltaTime)
+//{
+//	Super::Tick(DeltaTime);
+//
+//}
 

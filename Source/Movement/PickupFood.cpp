@@ -7,7 +7,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "MovementCharacter.h"
-#include "ArmedState.h"
+//#include "ArmedState.h"
 #include "Components/AudioComponent.h"
 
 // Sets default values
@@ -87,7 +87,7 @@ void APickupFood::Equip()
 	if (PlayerCharacter)
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("inside equip in PickupItem PlayCharacter init___"));
-		if (PlayerCharacter->armedState && !PlayerCharacter->armedState->WeaponInHand)
+		if (!PlayerCharacter->WeaponInHand)
 		{
 			PickupSMComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			PickupBoxCollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -97,9 +97,9 @@ void APickupFood::Equip()
 			PlayerCharacter->CurrentPickupItemInHand = this;
 			//UE_LOG(LogTemp, Warning, TEXT("inside equip without weapon in hand"));
 		}
-		else if (PlayerCharacter->armedState && PlayerCharacter->armedState->WeaponInHand)
+		else if (PlayerCharacter->WeaponInHand)
 		{
-			PlayerCharacter->armedState->EquipWeaponToHand(PlayerCharacter);//this will unequip existing weapon in hand
+			PlayerCharacter->EquipWeaponToHand();//this will unequip existing weapon in hand
 			PickupSMComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			PickupBoxCollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			PickupBoxCollisionComponent->SetGenerateOverlapEvents(false);

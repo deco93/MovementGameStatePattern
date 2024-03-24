@@ -8,10 +8,11 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "SwimmingState.h"
-#include "ClimbingState.h"
-#include "ArmedState.h"
-#include "NinjaState.h"
+//#include "SwimmingState.h"
+//#include "ClimbingState.h"
+//#include "ArmedState.h"
+//#include "NinjaState.h"
+//#include "MovementBaseState.h"
 #include "MovementGameMode.h"
 #include "ZombieNPC.h"
 #include "Item.h"
@@ -28,25 +29,17 @@
 #include "DrawDebugHelpers.h"
 #include "CommonUtils.h"
 #include <chrono>
+#include "Net/UnrealNetwork.h"
+#include "Projectile.h"
+//#include "Engine/ActorChannel.h"
 
 
 //////////////////////////////////////////////////////////////////////////
 // AMovementCharacter
 
-void AMovementCharacter::TimeToAimElapsed()
-{
-	UE_LOG(LogTemp, Warning, TEXT("called %s"), ANSI_TO_TCHAR(__FUNCTION__));
-	if (armedState)
-	{
-		armedState->IsFireReady = true;
-		FName GunMuzzleName = FName(FString("b_gun_muzzleflash"));
-		FVector MuzzleLocation = Weapon->WeaponSkeletalMeshComp->GetBoneLocation(GunMuzzleName);
-		DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleLocation + (GetActorUpVector() * 500.0f), FColor::Cyan, false, 10.0f);
-	}
-}
 
 AMovementCharacter::AMovementCharacter()
-{
+{	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
@@ -55,7 +48,7 @@ AMovementCharacter::AMovementCharacter()
 	BaseLookUpRate = 45.f;
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
+	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
@@ -112,9 +105,7 @@ AMovementCharacter::AMovementCharacter()
 	{
 		ASValSound = ASValSoundCueClass.Object;
 	}
-	swimmingState = new SwimmingState();
-	climbingState = new ClimbingState();
-	armedState = new ArmedState();
+	
 	Water = 100.f;
 	Food = 100.f;
 	Blood = 100.0f;
@@ -123,16 +114,40 @@ AMovementCharacter::AMovementCharacter()
 }
 
 AMovementCharacter::~AMovementCharacter()
+{	
+	//TODO move below logic to when player leaves exits server
+}
+
+void AMovementCharacter::TimeToAimElapsed()
 {
-	if (swimmingState)
-		delete swimmingState;
-
-	if (climbingState)
-		delete climbingState;
-
-	if (armedState)
-		delete armedState;
+	UE_LOG(LogTemp, Warning, TEXT("called %s"), ANSI_TO_TCHAR(__FUNCTION__));
 	
+	IsFireReady = true;
+	Server_ArmedStateSetIsFireReady(true);
+	FName GunMuzzleName = FName(FString("b_gun_muzzleflash"));
+	FVector MuzzleLocation = Weapon->WeaponSkeletalMeshComp->GetBoneLocation(GunMuzzleName);
+	DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleLocation + (GetActorUpVector() * 500.0f), FColor::Cyan, false, 10.0f);
+}
+
+void AMovementCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Here we list the variables we want to replicate
+	DOREPLIFETIME(AMovementCharacter, PotentialWeapon);
+	DOREPLIFETIME(AMovementCharacter, Weapon);
+	//### BEGIN movement state replicated variables ###
+	//ArmedState
+	DOREPLIFETIME(AMovementCharacter, WeaponInHand);
+	DOREPLIFETIME(AMovementCharacter, IsAiming);
+	DOREPLIFETIME(AMovementCharacter, IsFiring);
+	DOREPLIFETIME(AMovementCharacter, IsFireReady);
+	//SwimmingState
+	DOREPLIFETIME(AMovementCharacter, InWater);
+	//ClimbingState
+	DOREPLIFETIME(AMovementCharacter, ClimbUp);
+	DOREPLIFETIME(AMovementCharacter, LedgeHorizontalSpeed);
+	//### END movement state replicated variables ###
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -180,24 +195,24 @@ void AMovementCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 
 void AMovementCharacter::OnBeginOverlap( UPrimitiveComponent* OverlappedComponent,AActor* OtherActor,UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {	
-	if (OtherActor->ActorHasTag("Lake") && swimmingState)
+	if (OtherActor->ActorHasTag("Lake"))
 	{
-		swimmingState->InWater = true;
-		swimmingState->WaterZ = GetActorLocation().Z;
-		UE_LOG(LogTemp, Warning, TEXT("Overlap begin with lake Z location: %f"), swimmingState->WaterZ);
-		//UE_LOG(LogTemp, Warning, TEXT("Overlap begin with lake"));
+		InWater = true;
+		Server_SwimmingStateSetInWater(true);
+		WaterZ = GetActorLocation().Z;
+		UE_LOG(LogTemp, Warning, TEXT("Overlap begin with lake Z location: %f"), WaterZ);
 	}
 }
 
 void AMovementCharacter::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (OtherActor->ActorHasTag("Lake") && swimmingState)
+	if (OtherActor->ActorHasTag("Lake"))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Overlap end with lake"));
-		swimmingState->InWater = false;
-		swimmingState->WaterZ = 0.0f;
+		InWater = false;
+		Server_SwimmingStateSetInWater(false);
+		WaterZ = 0.0f;
 	}
-
 }
 
 void AMovementCharacter::BeginPlay()
@@ -206,55 +221,47 @@ void AMovementCharacter::BeginPlay()
 	UE_LOG(LogTemp, Warning, TEXT("inside beginplay of character"));
 	GM = Cast<AMovementGameMode>(GetWorld()->GetAuthGameMode());
 	MovementCharacterPC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	//init different movement states and set them up for replication as they are UObjects
+	
+
 	//InitUpVector = GetActorUpVector();
 	SizeX = 0, 
 	SizeY = 0;
-	MovementCharacterPC->GetViewportSize(SizeX, SizeY);
-	ScreenMiddleCoordinates.X = SizeX / 2.0f;
-	ScreenMiddleCoordinates.Y = SizeY / 2.0f;
-	if(GM)
-		GM->SetPlayerCharacter(this);
-	/*if (WeaponClass)
+	if (MovementCharacterPC)
 	{
-		FActorSpawnParameters WeaponSpawnParams;
-		WeaponSpawnParams.bNoFail = true;
-		WeaponSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		FTransform WeaponTransform;
-		WeaponTransform.SetLocation(FVector::ZeroVector);
-		WeaponTransform.SetRotation(FQuat(FRotator::ZeroRotator));
+		MovementCharacterPC->GetViewportSize(SizeX, SizeY);
+		ScreenMiddleCoordinates.X = SizeX / 2.0f;
+		ScreenMiddleCoordinates.Y = SizeY / 2.0f;
+		if (GM)
+			GM->SetPlayerCharacter(this);
+		
+		bool IsReadSuccess = false;
+		FString ReadOutputMessage;
+		FString ReadString = CommonUtils::ReadFile(FPaths::ProjectConfigDir() + "/DefaultSpawns.json", IsReadSuccess, ReadOutputMessage);
 
-		Weapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass, WeaponTransform, WeaponSpawnParams);
-		if (Weapon)
+		if (IsReadSuccess)
 		{
-			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
-		}
-	}*/
-	bool IsReadSuccess = false;
-	FString ReadOutputMessage;
-	FString ReadString = CommonUtils::ReadFile(FPaths::ProjectConfigDir() + "/DefaultSpawns.json", IsReadSuccess, ReadOutputMessage);
-
-	if (IsReadSuccess)
-	{
-		GEngine->AddOnScreenDebugMessage(-1,20.0f, FColor::Blue, FString::Printf(TEXT("file read success contents: %s"), *ReadString));
-		TArray<TSharedPtr<FJsonValue>> ReadJsonArr;
-		if (FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(ReadString), ReadJsonArr))
-		{
-			if (ReadJsonArr[0].IsValid())
+			GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Blue, FString::Printf(TEXT("file read success contents: %s"), *ReadString));
+			TArray<TSharedPtr<FJsonValue>> ReadJsonArr;
+			if (FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(ReadString), ReadJsonArr))
 			{
-				FString CharacterName;
-				if (const TSharedPtr<FJsonObject> ReadObj = ReadJsonArr[0]->AsObject())
+				if (ReadJsonArr[0].IsValid())
 				{
-					if (ReadObj->TryGetStringField("ItemClass", CharacterName))
+					FString CharacterName;
+					if (const TSharedPtr<FJsonObject> ReadObj = ReadJsonArr[0]->AsObject())
 					{
-						if (CharacterNameComponent)
-							CharacterNameComponent->SetText(FText::FromString(CharacterName));
+						if (ReadObj->TryGetStringField("ItemClass", CharacterName))
+						{
+							if (CharacterNameComponent)
+								CharacterNameComponent->SetText(FText::FromString(CharacterName));
+						}
 					}
 				}
 			}
 		}
+		else
+			GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Blue, FString::Printf(TEXT("file read failed")));
 	}
-	else
-		GEngine->AddOnScreenDebugMessage(-1,20.0f, FColor::Blue, FString::Printf(TEXT("file read failed")));
 }
 
 
@@ -292,27 +299,25 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 	OnSurvivalStatsUIUpdate.Broadcast(Cuts,Cuts>0, Water/100.0f, Food/100.0f, Blood/100.0f, Health/100.f);
 	if(Health<=0.0f)
 		OnDeathOfCharacter.Broadcast();
-	if (swimmingState && swimmingState->InWater)
+	if (InWater)
 	{
 		float CapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 		//UE_LOG(LogTemp, Warning, TEXT("Half Capsule height: %f"), CapsuleHalfHeight);
-		float HeightBelowWater = swimmingState->WaterZ - GetActorLocation().Z;
+		float HeightBelowWater = WaterZ - GetActorLocation().Z;
 		UCharacterMovementComponent* uCharaceterMovement = GetCharacterMovement();
 		if (uCharaceterMovement->MovementMode != EMovementMode::MOVE_Swimming && HeightBelowWater > CapsuleHalfHeight)
 		{
 			//TODO set swimming state
 			uCharaceterMovement->SetMovementMode(EMovementMode::MOVE_Swimming);
-			currentNinjaState = swimmingState;
-			//currentNinjaState->HandleInput(this, InputTypeDirection::UP_ITD, 1.0f);
 		}
 		else if (HeightBelowWater <= CapsuleHalfHeight && uCharaceterMovement->MovementMode != EMovementMode::MOVE_Falling)
 		{
 			uCharaceterMovement->SetMovementMode(EMovementMode::MOVE_Walking);
 		}
 
-		if (currentNinjaState && uCharaceterMovement->MovementMode == EMovementMode::MOVE_Swimming)
-			currentNinjaState->Update(this);
-		//UE_LOG(LogTemp, Warning, TEXT("current movement mode walking: %d swimming: %d"), uCharaceterMovement->MovementMode == EMovementMode::MOVE_Walking, uCharaceterMovement->MovementMode == EMovementMode::MOVE_Swimming);
+		if (uCharaceterMovement->MovementMode == EMovementMode::MOVE_Swimming)
+			UpdateSwimmingState();
+		
 	}
 	if (GetCharacterMovement()->IsFalling())
 	{
@@ -331,38 +336,27 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 				FVector LocationToHang(OHit.ImpactPoint.X, OHit.ImpactPoint.Y, OHit2.ImpactPoint.Z - (1.5f*GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()));
 				GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
 
-
-				currentNinjaState = climbingState;
-
 				SetActorLocation(LocationToHang);
 				GetCharacterMovement()->StopMovementImmediately();
 				GetCharacterMovement()->BrakingDecelerationFlying = 1200.0f;
 				GetCharacterMovement()->MaxFlySpeed = 100.0f;
 				SetActorRotation((OHit.ImpactNormal*-1).Rotation());
 				GetCharacterMovement()->RotationRate = FRotator(0,0,0);
-				climbingState->LastLedgeClimbPosition = OHit2.ImpactPoint + GetActorUpVector() * (GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + 20.0f);
-				//LastLedgeClimbPosition = OHit2.ImpactPoint + GetActorUpVector() * (GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + 20.0f);
-				
+				LastLedgeClimbPosition = OHit2.ImpactPoint + GetActorUpVector() * (GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + 20.0f);
 			}
-			/*else if(OHit.bBlockingHit && !OHit.Actor->ActorHasTag("Ledge"))
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Hit success"));
-			}
-			else 
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Hit failed"));
-			}*/
 		}
 	}
-	if (armedState && armedState->WeaponInHand && armedState->IsAiming)
+	if (WeaponInHand && IsAiming)
 	{
 		GetCrosshairProjectedWorldLocation();
 		const FVector CameraLookDirectionFarPoint = (CrosshairProjectedWorldLocation + (CrosshairProjectedWorldLocation - MovementCharacterPC->PlayerCameraManager->GetCameraLocation()).GetSafeNormal() * 1000.f);
 
 		AimDirection = (CameraLookDirectionFarPoint - GetActorLocation()).GetSafeNormal();
-		SetActorRotation(AimDirection.Rotation());
+		//SetActorRotation(AimDirection.Rotation());
+		//GetController()->SetControlRotation(AimDirection.Rotation());
+		//Server_SetActorRotationWhileAim(AimDirection.Rotation());
 	}
-	if (armedState && armedState->WeaponInHand && armedState->IsAiming && armedState->IsFiring && !PlayerAudioComponent->IsPlaying())
+	if (WeaponInHand && IsAiming && IsFiring && !PlayerAudioComponent->IsPlaying())
 	{
 		if (Weapon->Durability <= 0)
 		{
@@ -371,8 +365,10 @@ void AMovementCharacter::Tick(float DeltaSeconds)
 			Weapon->Destroy();
 			Weapon = nullptr;
 			StopAim();
-			armedState->WeaponInHand = false;
-			armedState->IsFiring = false;
+			WeaponInHand = false;
+			IsFiring = false;
+			Server_ArmedStateSetWeaponInHand(false);
+			Server_ArmedStateSetIsFiring(false);
 			return;
 		}
 		UE_LOG(LogTemp, Warning, TEXT("Trying to play fire sound"));
@@ -410,63 +406,32 @@ void AMovementCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
-
 void AMovementCharacter::OnClimbComplete()
 {
 	UE_LOG(LogTemp, Warning,TEXT("ClimbUp finished"));
-	climbingState->ClimbUp = false;
-	//ClimbUp = false;
-	if(climbingState)
-		SetActorLocation(climbingState->LastLedgeClimbPosition);
+	ClimbUp = false;
+	Server_ClimbingStateSetClimbUp(false);
+	
+	SetActorLocation(LastLedgeClimbPosition);
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 }
 
-
-
-void AMovementCharacter::SetTimer()
-{
-	if (currentNinjaState)
-	{
-		GetWorld()->GetTimerManager().SetTimer(GM->TIMER_HANDLE, this, &AMovementCharacter::OnClimbComplete, 2.0f, false);
-	}
-}
-
-bool  AMovementCharacter::GetClimbUp()
-{
-
-	return climbingState->ClimbUp;
-}
-
-float AMovementCharacter::GetLedgeHorizontalSpeed()
-{
-	return climbingState->LedgeHorizontalSpeed;
-}
-
-bool AMovementCharacter::IsArmedWithGun()
-{
-	if (armedState)
-	{
-		return armedState->WeaponInHand;
-	}
-	return false;
-}
-
-bool AMovementCharacter::IsAiming()
-{
-	if (armedState)
-	{
-		return armedState->WeaponInHand && armedState->IsAiming;
-	}
-	return false;
+void AMovementCharacter::SetClimbTimer()
+{	
+	GetWorld()->GetTimerManager().SetTimer(GM->TIMER_HANDLE, this, &AMovementCharacter::OnClimbComplete, 2.0f, false);
 }
 
 void AMovementCharacter::UseItem(class UItem* Item)
+{	
+	Server_UseItem(Item);
+}
+
+void AMovementCharacter::Server_UseItem_Implementation(UItem* Item)
 {
 	if (Item)
 	{
 		Item->Use(this);
-		//Item->OnUse(this);//this is bp implementation
 	}
 }
 
@@ -500,9 +465,7 @@ void AMovementCharacter::TriggerAimStatus(bool IsAim)
 
 void AMovementCharacter::TakeDamage()
 {
-	
-		GetWorld()->GetTimerManager().SetTimer(CHARACTER_TIMER_HANDLE, this, &AMovementCharacter::OnTakingDamage, 1.4f, false);
-	
+	GetWorld()->GetTimerManager().SetTimer(CHARACTER_TIMER_HANDLE, this, &AMovementCharacter::OnTakingDamage, 1.4f, false);
 }
 
 void AMovementCharacter::OnTakingDamage()
@@ -529,8 +492,7 @@ void AMovementCharacter::EnhancedInputJump()
 	if (!GetCharacterMovement()->IsFalling())
 	{
 		UGameplayStatics::PlaySound2D(GetWorld(), JumpSound);
-		if (armedState)
-			StopAim();
+		StopAim();
 	}
 	ACharacter::Jump();
 }
@@ -551,12 +513,13 @@ void AMovementCharacter::EnhancedInputMoveForward(const FInputActionValue& Value
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		AddMovementInput(Direction, ValueForward);
 	}
-	else if ((Controller != nullptr) && (ValueForward != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying) && !climbingState->ClimbUp)
+	else if ((Controller != nullptr) && (ValueForward != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying) && !ClimbUp)
 	{
 		//else if ((Controller != nullptr) && (Value != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Flying) && !ClimbUp)
-		climbingState->ClimbUp = true;
-		if (currentNinjaState)
-			currentNinjaState->HandleInput(this, InputTypeDirection::FORWARD_ITD, ValueForward);
+		ClimbUp = true;
+		Server_ClimbingStateSetClimbUp(ClimbUp);
+		
+		HandleClimbingStateInput(InputTypeDirection::FORWARD_ITD, ValueForward);
 		//ClimbUp = true;
 		GetWorld()->GetTimerManager().SetTimer(GM->TIMER_HANDLE, this, &AMovementCharacter::OnClimbComplete, 2.0f, false);
 	}
@@ -577,11 +540,7 @@ void AMovementCharacter::EnhancedInputMoveRight(const FInputActionValue& Value)
 		if (GM && CharacterMovementMode == EMovementMode::MOVE_Flying)
 		{
 			//check if movable right or left on ledge if movement mode flying
-			if (currentNinjaState)
-			{
-				currentNinjaState->HandleInput(this, InputTypeDirection::RIGHT_ITD, ValueRight);
-			}
-
+			HandleClimbingStateInput(InputTypeDirection::RIGHT_ITD, ValueRight);
 		}
 		if (CharacterMovementMode != EMovementMode::MOVE_Flying)
 		{
@@ -592,7 +551,8 @@ void AMovementCharacter::EnhancedInputMoveRight(const FInputActionValue& Value)
 	}
 	else if ((CharacterMovementMode == EMovementMode::MOVE_Flying) && (Controller != nullptr) && (ValueRight == 0.0f))
 	{
-		climbingState->LedgeHorizontalSpeed = 0.0f;
+		LedgeHorizontalSpeed = 0.0f;
+		Server_ClimbingStateSetLedgeHSpeed(0.0f);
 	}
 }
 
@@ -601,10 +561,8 @@ void AMovementCharacter::EnhancedInputSwimUp(const FInputActionValue& Value)
 	float SwimUpValue = Value.Get<float>();
 	if ((Controller != nullptr) && (SwimUpValue != 0.0f) && (GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Swimming))
 	{
-		if (currentNinjaState)
-			currentNinjaState->HandleInput(this, InputTypeDirection::UP_ITD, SwimUpValue);
+		HandleSwimmingStateInput(InputTypeDirection::UP_ITD, SwimUpValue);
 	}
-
 }
 
 void AMovementCharacter::ToggleFlashLight()
@@ -616,6 +574,105 @@ void AMovementCharacter::ToggleFlashLight()
 		else
 			FlashLight->SetVisibility(true);
 	}
+}
+
+void AMovementCharacter::EquipWeaponToHand()
+{
+	if (Weapon)
+	{
+		if (!WeaponInHand)
+		{
+			//if (aMovementCharacter->CurrentPickupItemInHand && aMovementCharacter->CurrentPickupItemInHand->GetStaticMeshComp())
+			if (CurrentPickupItemInHand)
+			{
+				CurrentPickupItemInHand->DetachFromCharacterSocket();
+				//aMovementCharacter->CurrentPickupItemInHand = nullptr;
+			}
+			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
+			WeaponInHand = true;
+		}
+		else
+		{
+			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
+			WeaponInHand = false;
+			if (IsAiming)
+				IsAiming = false;
+
+			if (IsFiring)
+				IsFiring = false;
+		}
+		Server_ArmedStateSetWeaponInHand(WeaponInHand);
+	}
+}
+
+void AMovementCharacter::HandleSwimmingStateInput(InputTypeDirection inputType, float axisValue)
+{
+	UE_LOG(LogTemp, Warning, TEXT("inside HandleInput of swimming state"));
+	if (inputType == InputTypeDirection::UP_ITD)
+	{
+		const FRotator Rotation = Controller->GetControlRotation();
+		const FRotator RollRotation(Rotation.Roll, 0, 0);
+
+		// get right vector 
+		const FVector Direction = FRotationMatrix(RollRotation).GetUnitAxis(EAxis::Z);
+		// add movement in that direction
+		AddMovementInput(Direction, axisValue);
+	}
+	UE_LOG(LogTemp, Warning, TEXT("inside HandleInput of swimming state after addmovement input"));
+}
+
+void AMovementCharacter::UpdateSwimmingState()
+{
+	UE_LOG(LogTemp, Warning, TEXT("inside %s"), ANSI_TO_TCHAR(__FUNCTION__));
+	SwimStateSoundCooldown += GetWorld()->DeltaTimeSeconds;
+	if (SwimStateSoundCooldown > 1.5f)
+	{
+		SwimStateSoundCooldown = 0.0f;
+		UGameplayStatics::PlaySound2D(GetWorld(), SwimSound);
+	}
+}
+
+void AMovementCharacter::HandleClimbingStateInput(InputTypeDirection inputType, float axisValue)
+{
+	UE_LOG(LogTemp, Warning, TEXT("inside HandleInput of climbing state"));
+	if (inputType == InputTypeDirection::FORWARD_ITD)
+	{
+		SetClimbTimer();
+		UGameplayStatics::PlaySound2D(GetWorld(), ClimbSound);
+	}
+	else if (inputType == InputTypeDirection::RIGHT_ITD)
+	{
+		FVector StartLocation;
+		FVector Direction;
+		if (axisValue > 0.0f)
+		{
+			StartLocation = GetActorLocation() + GetActorRightVector() * 100.0f;
+			LedgeHorizontalSpeed = 100.0f;
+			Server_ClimbingStateSetLedgeHSpeed(100.0f);
+		}
+		else if (axisValue < 0.0f)
+		{
+			StartLocation = GetActorLocation() - (GetActorRightVector() * 100.0f);
+			LedgeHorizontalSpeed = -100.0f;
+			Server_ClimbingStateSetLedgeHSpeed(-100.0f);
+		}
+
+		StartLocation.Z = StartLocation.Z + (GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() - 15.0f);//raise the startlocation to about ledge hand location Z
+		FVector EndLocation = StartLocation + GetActorForwardVector() * TraceDistance;
+		FHitResult OHit = GM->DrawLineTrace(StartLocation, EndLocation);
+		if (OHit.bBlockingHit && !OHit.GetActor()->ActorHasTag("Ledge"))
+			axisValue = 0.0f;
+		else if (!OHit.bBlockingHit)
+			axisValue = 0.0f;
+
+		Direction = GetActorRightVector();
+		AddMovementInput(Direction, axisValue);
+	}
+}
+
+void AMovementCharacter::UpdateClimbingState()
+{
+	UE_LOG(LogTemp, Warning, TEXT("inside Update of climbing state"));
 }
 
 FVector AMovementCharacter::GetCrosshairProjectedWorldLocation()
@@ -631,24 +688,39 @@ FVector AMovementCharacter::GetCrosshairProjectedWorldLocation()
 void AMovementCharacter::Pickup()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Pressed Pickup"));
-	//if (Weapon) {
-	if (PotentialWeapon) {
-		//TODO Pickup logic
-		AddToInventory(PotentialWeapon->GetWeaponInventoryItem());
+	Server_Pickup();
+}
+
+void AMovementCharacter::Client_AddToInventory_Implementation(UGunItem* GunItem)
+{
+	if (GunItem)
+	{
+		AddToInventory(GunItem);
+	}
+}
+
+void AMovementCharacter::Server_Pickup_Implementation()
+{
+	if (PotentialWeapon)
+	{
+		//AddToInventory(PotentialWeapon->GetWeaponInventoryItem());
+		Client_AddToInventory(PotentialWeapon->GetWeaponInventoryItem());
 		FVector NewWeaponLocation = PotentialWeapon->GetActorLocation();
 		TriggerPickup(PotentialWeapon->GetActorLocation());
 		PotentialWeapon->WeaponPickedUp = true;
-		if(armedState && !armedState->WeaponInHand)
+		if (!WeaponInHand)
 			PotentialWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
-		else if(armedState && armedState->WeaponInHand)
+		else if (WeaponInHand)
 			PotentialWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightHandSocket"));
+
 		if (Weapon)
 		{
 			Weapon->DetachRootComponentFromParent(false);
 			Weapon->SetActorLocation(NewWeaponLocation);
 			Weapon->WeaponPickedUp = false;
 			TriggerPickup(Weapon->GetActorLocation());
-			RemoveFromInventory(Weapon->GetWeaponInventoryItem());
+			//RemoveFromInventory(Weapon->GetWeaponInventoryItem());
+			Client_RemoveFromInventory(Weapon->GetWeaponInventoryItem());
 			Weapon = PotentialWeapon;
 			PotentialWeapon = nullptr;
 		}
@@ -663,60 +735,45 @@ void AMovementCharacter::Pickup()
 			SecondsBetweenBullet = 1 / (Weapon->WeaponFireRate / 60.0f);
 			UE_LOG(LogTemp, Warning, TEXT("SecondsBetweenBullet: %f"), SecondsBetweenBullet);
 		}
-		/*Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RightShoulderSocket"));
-		Weapon->WeaponPickedUp = true;
-		TriggerPickup(Weapon->GetActorLocation());*/
 	}
 }
 
-void AMovementCharacter::Aim()
+void AMovementCharacter::Client_RemoveFromInventory_Implementation(UGunItem* GunItem)
 {
-	if (armedState && armedState->WeaponInHand && !armedState->IsAiming && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Walking)
+	if (GunItem)
 	{
-		//CurrentLerpDuration = 0.0f;
-		armedState->IsAiming = true;
-		GetCharacterMovement()->MaxWalkSpeed = 100.f;
-		TriggerAimStatus(armedState->IsAiming);//this is for notifying crosshair UI in level blueprint
-		CameraBoom->TargetArmLength = 200.0f;
-		CameraBoom->SocketOffset = FVector(0,85,75);
-		/*if (Weapon)
-		{
-			//GM->DrawLineTrace(Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))) + (GetActorUpVector() * 500.0f), FColor::Cyan, false, 10.0f);
-			//DrawDebugLine(GetWorld(), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))) + (GetActorUpVector() * 500.0f),FColor::Cyan, false, 10.0f);
-			FName GunMuzzleName = FName(FString("b_gun_muzzleflash"));
-			FVector MuzzleLocation = Weapon->WeaponSkeletalMeshComp->GetBoneLocation(GunMuzzleName);
-			DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleLocation + (GetActorUpVector() * 500.0f),FColor::Cyan, false, 10.0f);
-			Weapon->SpawnProjectile(MuzzleLocation + (GetActorForwardVector()*500.0f), GetActorRotation());
-		}*/
-		if (Weapon)
-		{
-			GetWorldTimerManager().SetTimer(TIMER_HANDLE_TIME_TO_AIM, this, &AMovementCharacter::TimeToAimElapsed, 1.0f, false, Weapon->TimeToAim);
-		}
+		RemoveFromInventory(GunItem);
 	}
 }
 
-void AMovementCharacter::StopAim()
+
+
+void AMovementCharacter::Server_SwimmingStateSetInWater_Implementation(bool bIsInWater)
 {
-	//if (armedState && armedState->WeaponInHand && armedState->IsAiming && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Walking)
-	if (armedState && armedState->WeaponInHand)
-	{
-		//CurrentLerpDuration = 0.0f;
-		armedState->IsAiming = false;
-		armedState->IsFireReady = false;
-		GetWorldTimerManager().ClearTimer(TIMER_HANDLE_TIME_TO_AIM);
-		GetCharacterMovement()->MaxWalkSpeed = 600.f;
-		TriggerAimStatus(armedState->IsAiming);
-		CameraBoom->TargetArmLength = 300.0f;
-		CameraBoom->SocketOffset = FVector(0, 65, 55);
-	}
-	FRotator FollowCameraCurrentRotation = FollowCamera->GetForwardVector().Rotation();
-	FRotator CurrentPlayerRotation(0, FollowCameraCurrentRotation.Yaw, 0);
-	SetActorRotation(CurrentPlayerRotation);
+	InWater = bIsInWater;
 }
 
-void AMovementCharacter::Fire()
+void AMovementCharacter::Server_ClimbingStateSetClimbUp_Implementation(bool bIsClimbUp)
 {
-	if (armedState && armedState->WeaponInHand && armedState->IsAiming && armedState->IsFireReady)
+	ClimbUp = bIsClimbUp;
+}
+
+void AMovementCharacter::Server_ClimbingStateSetLedgeHSpeed_Implementation(float LedgeHSpeed)
+{
+	LedgeHorizontalSpeed = LedgeHSpeed;
+}
+
+bool AMovementCharacter::Server_ClimbingStateSetLedgeHSpeed_Validate(float LedgeHSpeed)
+{
+	if (LedgeHSpeed < -100.0f || LedgeHSpeed> 100.0f)
+		return false;
+	return true;
+}
+
+
+void AMovementCharacter::Server_Fire_Implementation(FVector MuzzleLocation)
+{
+	if (WeaponInHand && IsAiming && IsFireReady)
 	{
 		if (Weapon)
 		{
@@ -725,13 +782,14 @@ void AMovementCharacter::Fire()
 				double TempCurrentMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
 					.count();
 				UE_LOG(LogTemp, Warning, TEXT("<<<< computed diff %lf"), ((TempCurrentMillis - LastFireTimestampMillis) / 1000.0f));
-				if ( ((TempCurrentMillis - LastFireTimestampMillis)/1000.0f) >= SecondsBetweenBullet)
+				if (((TempCurrentMillis - LastFireTimestampMillis) / 1000.0f) >= SecondsBetweenBullet)
 				{
 					LastFireTimestampMillis = TempCurrentMillis;
 				}
 				else
 				{
-					armedState->IsFiring = false;
+					IsFiring = false;
+					//Server_ArmedStateSetIsFiring(false);
 					return;
 				}
 			}
@@ -740,7 +798,8 @@ void AMovementCharacter::Fire()
 				LastFireTimestampMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
 					.count();
 			}
-			armedState->IsFiring = true;
+			IsFiring = true;
+			//Server_ArmedStateSetIsFiring(true);
 			UE_LOG(LogTemp, Warning, TEXT("called %s"), ANSI_TO_TCHAR(__FUNCTION__));
 			//TODO take decision of whether M4 being fired or As-Val? whichever weapon is being fired
 			if (Weapon->WeaponInventoryItem->ItemDisplayName.ToString().Compare("M4-A1") == 0)//As-Val M4-A1
@@ -751,70 +810,122 @@ void AMovementCharacter::Fire()
 			{
 				PlayerAudioComponent->SetSound(ASValSound);
 			}
-
-			//GM->DrawLineTrace(Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))) + (GetActorUpVector() * 500.0f), FColor::Cyan, false, 10.0f);
-			//DrawDebugLine(GetWorld(), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))), Weapon->WeaponSkeletalMeshComp->GetBoneLocation(FName(*FString(TEXT("b_gun_muzzleflash")))) + (GetActorUpVector() * 500.0f),FColor::Cyan, false, 10.0f);
-			SpawnProjectile();
-
-			//PlayerAudioComponent->Play();
+			SpawnProjectile(MuzzleLocation);
 		}
 	}
 }
 
-void AMovementCharacter::StopFire()
+void AMovementCharacter::Client_DrawFireSphere_Implementation(FVector MuzzleLocation, FVector ProjectileSpawnLocation)
 {
-	if (armedState)
+	DrawDebugSphere(GetWorld(), MuzzleLocation, 10.0f, 10, FColor::Red, false, 10.0f);
+	DrawDebugSphere(GetWorld(), ProjectileSpawnLocation, 10.0f, 10, FColor::Green, false,10.0f);
+}
+
+void AMovementCharacter::Aim()
+{
+	if (WeaponInHand && !IsAiming && GetCharacterMovement()->MovementMode == EMovementMode::MOVE_Walking)
 	{
-		armedState->IsFiring = false;
-		GetWorldTimerManager().ClearTimer(TIMER_FIRE_RATE);
-		if (PlayerAudioComponent->IsPlaying())
+		//CurrentLerpDuration = 0.0f;
+		IsAiming = true;
+		Server_ArmedStateSetIsAiming(true);
+		GetCharacterMovement()->MaxWalkSpeed = 100.f;
+		TriggerAimStatus(IsAiming);//this is for notifying crosshair UI in level blueprint		
+		CameraBoom->TargetArmLength = 200.0f;
+		CameraBoom->SocketOffset = FVector(0,85,75);
+		
+		if (Weapon)
 		{
-			PlayerAudioComponent->Stop();
+			GetWorldTimerManager().SetTimer(TIMER_HANDLE_TIME_TO_AIM, this, &AMovementCharacter::TimeToAimElapsed, 1.0f, false, Weapon->TimeToAim);
 		}
+	}
+}
+
+void AMovementCharacter::StopAim()
+{	
+	if (WeaponInHand)
+	{
+		//CurrentLerpDuration = 0.0f;
+		IsAiming = false;
+		IsFireReady = false;
+		Server_ArmedStateSetIsAiming(false);
+		Server_ArmedStateSetIsFireReady(false);
+		GetWorldTimerManager().ClearTimer(TIMER_HANDLE_TIME_TO_AIM);
+		GetCharacterMovement()->MaxWalkSpeed = 600.f;
+		TriggerAimStatus(IsAiming);
+		CameraBoom->TargetArmLength = 300.0f;
+		CameraBoom->SocketOffset = FVector(0, 65, 55);
+	}
+	/*FRotator FollowCameraCurrentRotation = FollowCamera->GetForwardVector().Rotation();
+	FRotator CurrentPlayerRotation(0, FollowCameraCurrentRotation.Yaw, 0);
+	SetActorRotation(CurrentPlayerRotation);*/
+}
+
+void AMovementCharacter::Fire()
+{
+	if (Weapon)
+	{
+		FName GunMuzzleName = FName(FString("b_gun_muzzleflash"));
+		FVector MuzzleLocation = Weapon->WeaponSkeletalMeshComp->GetBoneLocation(GunMuzzleName);
+		//calculating MuzzleLocation on client and then sending it to server as BoneLocation cannot 
+		//be fetched correctly on server as it seems to be always offset way down from where the muzzle bone is
+		Server_Fire(MuzzleLocation);
+	}
+}
+
+void AMovementCharacter::StopFire()
+{	
+	IsFiring = false;
+	Server_ArmedStateSetIsFiring(IsFiring);
+	GetWorldTimerManager().ClearTimer(TIMER_FIRE_RATE);
+	if (PlayerAudioComponent->IsPlaying())
+	{
+		PlayerAudioComponent->Stop();
 	}
 }
 
 void AMovementCharacter::Use()
 {
-	if (armedState && !armedState->WeaponInHand && CurrentPickupItemInHand)
+	if (!WeaponInHand && CurrentPickupItemInHand)
 	{
 		CurrentPickupItemInHand->Consume();
 	}
 }
 
-void AMovementCharacter::SpawnProjectile()
+void AMovementCharacter::SpawnProjectile(FVector MuzzleLocation)
 {
 	UE_LOG(LogTemp, Warning, TEXT("called %s"), ANSI_TO_TCHAR(__FUNCTION__));
 	if (Weapon)
-	{
-		FName GunMuzzleName = FName(FString("b_gun_muzzleflash"));
-		FVector MuzzleLocation = Weapon->WeaponSkeletalMeshComp->GetBoneLocation(GunMuzzleName);
-		Weapon->SpawnProjectile(MuzzleLocation + (GetActorForwardVector() * 10.0f), GetActorForwardVector().Rotation());
+	{	
+		UWorld* CurrentWorld = GetWorld();
+		if (CurrentWorld)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("CurrentWorld not null"));
+			if (Weapon && Weapon->ProjectileToSpawn)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("SpawnActor called for projectile"));
+				CurrentWorld->SpawnActor<AProjectile>(Weapon->ProjectileToSpawn, MuzzleLocation + (GetActorForwardVector() * 10.0f), GetActorForwardVector().Rotation());
+				Client_DrawFireSphere(MuzzleLocation, MuzzleLocation + (GetActorForwardVector() * 10.0f));
+			}
+		}
 	}
 }
 
-/*void AMovementCharacter::LerpAim(float DeltaSeconds)
-{
-	if (armedState && armedState->WeaponInHand && armedState->IsAiming && CurrentLerpDuration < 1.0f)
-	{
-		CameraBoom->TargetArmLength = FMath::Lerp(300.0f, 200.0f, CurrentLerpDuration / 1.0f);
-		CameraBoom->SocketOffset = FMath::Lerp(FVector(0, 65, 55), FVector(0, 85, 75), CurrentLerpDuration / 1.0f);
-		CurrentLerpDuration += DeltaSeconds;
-	}
-	else if (armedState && armedState->WeaponInHand && armedState->IsAiming && CurrentLerpDuration >= 1.0f)
-	{
-		CameraBoom->TargetArmLength = 200.0f;
-		CameraBoom->SocketOffset = FVector(0, 85, 75);
-	}
-	else if (armedState && armedState->WeaponInHand && !armedState->IsAiming && CurrentLerpDuration < 1.0f)
-	{
-		CameraBoom->TargetArmLength = FMath::Lerp(200.0f, 300.0f, CurrentLerpDuration / 1.0f);
-		CameraBoom->SocketOffset = FMath::Lerp(FVector(0, 85, 75), FVector(0, 65, 55), CurrentLerpDuration / 1.0f);
-		CurrentLerpDuration += DeltaSeconds;
-	}
-	else if (armedState && armedState->WeaponInHand && !armedState->IsAiming && CurrentLerpDuration >= 1.0f)
-	{
-		CameraBoom->TargetArmLength = 300.0f;
-		CameraBoom->SocketOffset = FVector(0, 65, 55);
-	}
-}*/
+void AMovementCharacter::Server_ArmedStateSetWeaponInHand_Implementation(bool bIsWeaponInHand)
+{	
+	WeaponInHand = bIsWeaponInHand;
+}
+
+void AMovementCharacter::Server_ArmedStateSetIsAiming_Implementation(bool bIsAiming)
+{	
+	IsAiming = bIsAiming;
+}
+
+void AMovementCharacter::Server_ArmedStateSetIsFiring_Implementation(bool bIsFiring)
+{	
+	IsFiring = bIsFiring;
+}
+
+void AMovementCharacter::Server_ArmedStateSetIsFireReady_Implementation(bool bIsFireReady)
+{	
+	IsFireReady = bIsFireReady;
+}

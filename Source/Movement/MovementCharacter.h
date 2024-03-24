@@ -18,6 +18,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
 
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPickup, FVector, Location, FText, WeaponName);
 
+enum InputTypeDirection {
+	UP_ITD,
+	RIGHT_ITD,
+	FORWARD_ITD
+};
+
 UCLASS(config=Game)
 class AMovementCharacter : public ACharacter
 {
@@ -38,7 +44,7 @@ class AMovementCharacter : public ACharacter
 	FTimerHandle TIMER_FIRE_RATE;
 	float SecondsBetweenBullet;
 	void TimeToAimElapsed();
-	void SpawnProjectile();
+	void SpawnProjectile(FVector MuzzleLocation);
 public:
 	AMovementCharacter();
 	~AMovementCharacter();
@@ -64,6 +70,41 @@ public:
 	virtual void BeginPlay() override;
 
 	void Pickup();
+	UFUNCTION(Server, Reliable)
+	void Server_Pickup();
+	UFUNCTION(Client, Reliable)
+	void Client_AddToInventory(class UGunItem* GunItem);
+
+	UFUNCTION(Client, Reliable)
+	void Client_RemoveFromInventory(class UGunItem* GunItem);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ArmedStateSetWeaponInHand(bool bIsWeaponInHand);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ArmedStateSetIsAiming(bool bIsAiming);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ArmedStateSetIsFiring(bool bIsFiring);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ArmedStateSetIsFireReady(bool bIsFireReady);
+
+	UFUNCTION(Server, Reliable)
+	void Server_SwimmingStateSetInWater(bool bIsInWater);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ClimbingStateSetClimbUp(bool bIsClimbUp);
+
+	UFUNCTION(Server, UnReliable, WithValidation)
+	void Server_ClimbingStateSetLedgeHSpeed(float LedgeHSpeed);
+
+
+	UFUNCTION(Server, Reliable)
+	void Server_Fire(FVector MuzzleLocation);
+
+	UFUNCTION(Client, Reliable)
+	void Client_DrawFireSphere(FVector MuzzleLocation, FVector ProjectileSpawnLocation);
 
 	void Aim();
 
@@ -90,6 +131,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegates")
 	FOnDeath OnDeathOfCharacter;
+
+	//bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 protected:
 
@@ -123,14 +166,7 @@ protected:
 	int SizeX;//Viewport X size
 	int SizeY;//Viewport Y size
 public:
-	//UPROPERTY()
-	class SwimmingState* swimmingState;
-	//UPROPERTY()
-	class ClimbingState* climbingState;
-	//UPROPERTY()
-	class ArmedState* armedState;
-	//UPROPERTY()
-	class NinjaState* currentNinjaState;
+	
 	UPROPERTY()
 	class AMovementGameMode* GM;
 	float TraceDistance = 500.0f;
@@ -149,19 +185,8 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-	void SetTimer();
-	UFUNCTION(BlueprintCallable)
-	bool GetClimbUp();
-
-	UFUNCTION(BlueprintCallable)
-	float GetLedgeHorizontalSpeed();
-
-	UFUNCTION(BlueprintCallable)
-	bool IsArmedWithGun();
-
-	UFUNCTION(BlueprintCallable)
-	bool IsAiming();
-
+	void SetClimbTimer();
+	
 	UPROPERTY(EditAnywhere)
 	USoundCue* JumpSound;
 
@@ -224,6 +249,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Items")
 	void UseItem(class UItem* Item);
 
+	UFUNCTION(Server, Reliable)
+	void Server_UseItem(class UItem* Item);
+
 	/*UPROPERTY(EditAnywhere)
 	TSubclassOf<class AWeaponBase> WeaponClass;*/
 
@@ -235,9 +263,10 @@ public:
 	
 	//used when pickup prompt shown and later swapped with Weapon if 
 	//player already has a Weapon after existing weapon dropped else just assigned to Weapon
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	class AWeaponBase* PotentialWeapon;
-	UPROPERTY()
+	//UPROPERTY(Replicated)
+	UPROPERTY(Replicated)
 	class AWeaponBase* Weapon;
 
 	UFUNCTION()
@@ -260,8 +289,42 @@ public:
 	void EnhancedInputSwimUp(const FInputActionValue& Value);
 
 	void ToggleFlashLight();
+	//### BEGIN movement methods ###
+	//ArmedState
+	void EquipWeaponToHand();
+	//SwimmingState
+	void HandleSwimmingStateInput(InputTypeDirection inputType, float axisValue);
+	void UpdateSwimmingState();
+	//ClimbingState
+	void HandleClimbingStateInput(InputTypeDirection inputType, float axisValue);
+	void UpdateClimbingState();
+	//### END movement methods ###
 
 	FVector GetCrosshairProjectedWorldLocation();
+	//### BEGIN movement related props ###
+	//1. ArmedState vars
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool WeaponInHand = false;//for managing animation states
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool IsAiming = false;//for managing animation states
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool IsFiring = false;//for managing animation states
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool IsFireReady = false;//for managing when fire is actually possible after an initial delay to aim
+
+	//2. ClimbingState vars
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool ClimbUp = false;
+	FVector LastLedgeClimbPosition;
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	float LedgeHorizontalSpeed = 0.0f;
+
+	//3. SwimmingState vars
+	float WaterZ = 0.0f;
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool InWater = false;
+	float SwimStateSoundCooldown = 0.0f;
+	//### BEGIN movement related props ###
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<class UItem> BandageInventoryItem;
@@ -274,8 +337,7 @@ public:
 
 
 	FTimerHandle CHARACTER_TIMER_HANDLE;
-	/*bool WeaponInHand = false;
-	void EquipWeaponToHand();*/
+	
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Enhanced Input")
 	UInputMappingContext* InputMappingContext;
